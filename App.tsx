@@ -494,7 +494,7 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
                className="w-full"
                icon={isProcessing ? Loader2 : Edit}
              >
-               {isProcessing ? 'Processing...' : 'Apply Edits'}
+               {isProcessing ? 'Processing...' : 'Edit Image'}
              </Button>
           </div>
         </Card>
