@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Menu, X, Image as ImageIcon, Wand2, Edit, PlaySquare, 
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
-  Trash2, Loader2, Sparkles, Layers, Video, Film
+  Trash2, Loader2, Sparkles, Layers, Video, Film,
+  Crop, Sliders, Check, RotateCcw
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio 
@@ -43,16 +44,221 @@ const Card = ({ children, className = '' }: any) => (
 const Modal = ({ isOpen, onClose, children }: any) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-      <button onClick={onClose} className="absolute top-6 right-6 text-white hover:text-gold-400 transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <button onClick={onClose} className="absolute top-6 right-6 text-white hover:text-gold-400 transition-colors z-50">
         <XCircle size={40} />
       </button>
-      <div className="max-w-7xl max-h-[90vh] overflow-auto">
+      <div className="max-w-7xl w-full max-h-[90vh] overflow-auto relative">
         {children}
       </div>
     </div>
   );
 };
+
+// --- Image Editor Modal ---
+
+const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: GeneratedImage | null, isOpen: boolean, onClose: () => void, onSave: (newImg: GeneratedImage) => void }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(null);
+  
+  // Edit States
+  const [filter, setFilter] = useState('none');
+  const [crop, setCrop] = useState('original'); // original, square, landscape, portrait
+  const [scale, setScale] = useState(100); // percentage
+
+  useEffect(() => {
+    if (isOpen && image) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = image.url;
+      img.onload = () => {
+        setOriginalImage(img);
+        // Reset states
+        setFilter('none');
+        setCrop('original');
+        setScale(100);
+      };
+    }
+  }, [isOpen, image]);
+
+  useEffect(() => {
+    if (originalImage && canvasRef.current) {
+      drawCanvas();
+    }
+  }, [originalImage, filter, crop, scale]);
+
+  const drawCanvas = () => {
+    if (!originalImage || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // 1. Determine Source Crop
+    let sx = 0, sy = 0, sw = originalImage.naturalWidth, sh = originalImage.naturalHeight;
+
+    if (crop === 'square') {
+      const minDim = Math.min(sw, sh);
+      sx = (sw - minDim) / 2;
+      sy = (sh - minDim) / 2;
+      sw = minDim;
+      sh = minDim;
+    } else if (crop === 'landscape') { // 16:9
+      const targetRatio = 16 / 9;
+      const currentRatio = sw / sh;
+      if (currentRatio > targetRatio) { // Image is wider than target
+        const newWidth = sh * targetRatio;
+        sx = (sw - newWidth) / 2;
+        sw = newWidth;
+      } else { // Image is taller
+        const newHeight = sw / targetRatio;
+        sy = (sh - newHeight) / 2;
+        sh = newHeight;
+      }
+    } else if (crop === 'portrait') { // 9:16
+      const targetRatio = 9 / 16;
+      const currentRatio = sw / sh;
+      if (currentRatio > targetRatio) {
+        const newWidth = sh * targetRatio;
+        sx = (sw - newWidth) / 2;
+        sw = newWidth;
+      } else {
+        const newHeight = sw / targetRatio;
+        sy = (sh - newHeight) / 2;
+        sh = newHeight;
+      }
+    }
+
+    // 2. Set Canvas Size (Output)
+    const scaleFactor = scale / 100;
+    canvasRef.current.width = sw * scaleFactor;
+    canvasRef.current.height = sh * scaleFactor;
+
+    // 3. Apply Filters & Draw
+    // Note: ctx.filter is supported in modern browsers
+    let filterString = 'none';
+    switch (filter) {
+      case 'grayscale': filterString = 'grayscale(100%)'; break;
+      case 'sepia': filterString = 'sepia(100%)'; break;
+      case 'warm': filterString = 'sepia(40%) saturate(150%)'; break;
+      case 'cool': filterString = 'hue-rotate(180deg) saturate(80%)'; break;
+      case 'vintage': filterString = 'sepia(40%) contrast(120%) brightness(90%)'; break;
+      case 'invert': filterString = 'invert(100%)'; break;
+    }
+    
+    ctx.filter = filterString;
+    
+    // Smooth scaling
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    ctx.drawImage(originalImage, sx, sy, sw, sh, 0, 0, canvasRef.current.width, canvasRef.current.height);
+  };
+
+  const handleSave = () => {
+    if (canvasRef.current && image) {
+      const newUrl = canvasRef.current.toDataURL(image.url.startsWith('data:image/png') ? 'image/png' : 'image/jpeg');
+      const newImage: GeneratedImage = {
+        ...image,
+        id: Date.now().toString() + Math.random(),
+        url: newUrl,
+        date: Date.now(),
+        prompt: image.prompt + ' (Edited)'
+      };
+      onSave(newImage);
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <div className="bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[85vh]">
+        {/* Canvas Area */}
+        <div className="flex-1 bg-silver-100 p-8 flex items-center justify-center overflow-auto min-h-[400px]">
+           <canvas ref={canvasRef} className="max-w-full max-h-full shadow-lg border border-silver-300 bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')]" />
+        </div>
+
+        {/* Controls Sidebar */}
+        <div className="w-full md:w-80 bg-white p-6 border-l border-silver-200 overflow-y-auto space-y-8">
+           <div>
+             <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
+               <Sliders size={20} className="text-gold-500" /> Adjustments
+             </h3>
+             
+             {/* Crop */}
+             <div className="mb-6">
+               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 block">Crop</label>
+               <div className="grid grid-cols-2 gap-2">
+                  {['original', 'square', 'landscape', 'portrait'].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setCrop(c)}
+                      className={`px-3 py-2 text-xs font-semibold rounded border ${
+                        crop === c 
+                        ? 'bg-black text-white border-black' 
+                        : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400'
+                      } transition-colors capitalize`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+               </div>
+             </div>
+
+             {/* Resize */}
+             <div className="mb-6">
+               <div className="flex justify-between items-center mb-2">
+                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Resize / Scale</label>
+                 <span className="text-xs font-mono text-gold-600">{scale}%</span>
+               </div>
+               <input 
+                 type="range" 
+                 min="10" 
+                 max="100" 
+                 value={scale} 
+                 onChange={(e) => setScale(Number(e.target.value))}
+                 className="w-full h-2 bg-silver-200 rounded-lg appearance-none cursor-pointer accent-gold-500"
+               />
+             </div>
+           </div>
+
+           <div>
+             <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
+               <Sparkles size={20} className="text-gold-500" /> Filters
+             </h3>
+             <div className="grid grid-cols-2 gap-2">
+               {['none', 'grayscale', 'sepia', 'warm', 'cool', 'vintage'].map((f) => (
+                 <button
+                   key={f}
+                   onClick={() => setFilter(f)}
+                   className={`px-3 py-2 text-xs font-semibold rounded border ${
+                     filter === f 
+                     ? 'bg-black text-white border-black' 
+                     : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400'
+                   } transition-colors capitalize`}
+                 >
+                   {f}
+                 </button>
+               ))}
+             </div>
+           </div>
+
+           <div className="pt-6 border-t border-silver-200 flex flex-col gap-3">
+             <Button onClick={handleSave} variant="gold" className="w-full" icon={Check}>
+               Save Changes
+             </Button>
+             <Button onClick={() => { 
+                setFilter('none'); setCrop('original'); setScale(100); 
+             }} variant="ghost" className="w-full" icon={RotateCcw}>
+               Reset All
+             </Button>
+           </div>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 
 // --- Main App Component ---
 
@@ -210,6 +416,7 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<GeneratedImage[]>([]);
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -259,6 +466,10 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSaveEdited = (newImg: GeneratedImage) => {
+    setGeneratedResults(prev => [newImg, ...prev]);
   };
 
   return (
@@ -398,6 +609,13 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
                  <img src={img.url} alt="Generated" className="w-full h-auto object-cover" />
                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
                     <div className="flex gap-2 justify-end">
+                       <button 
+                         onClick={() => setEditingImage(img)} 
+                         className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-all"
+                         title="Edit Image"
+                       >
+                         <Sliders size={20} />
+                       </button>
                        <button onClick={() => setPreviewImage(img)} className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-all">
                          <Maximize2 size={20} />
                        </button>
@@ -421,6 +639,14 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
            <img src={previewImage.url} alt="Full view" className="max-w-full max-h-[85vh] rounded-lg shadow-2xl" />
         )}
       </Modal>
+
+      {/* Image Editor Modal */}
+      <ImageEditorModal 
+        image={editingImage} 
+        isOpen={!!editingImage} 
+        onClose={() => setEditingImage(null)} 
+        onSave={handleSaveEdited}
+      />
     </div>
   );
 };
