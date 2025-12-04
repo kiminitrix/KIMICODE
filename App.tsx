@@ -63,7 +63,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
   
   // Edit States
   const [filter, setFilter] = useState('none');
-  const [crop, setCrop] = useState('original'); // original, square, landscape, portrait
+  const [crop, setCrop] = useState('original'); // original, square, landscape, portrait, 3:2, 2:3
   const [scale, setScale] = useState(100); // percentage
 
   useEffect(() => {
@@ -115,6 +115,30 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
       }
     } else if (crop === 'portrait') { // 9:16
       const targetRatio = 9 / 16;
+      const currentRatio = sw / sh;
+      if (currentRatio > targetRatio) {
+        const newWidth = sh * targetRatio;
+        sx = (sw - newWidth) / 2;
+        sw = newWidth;
+      } else {
+        const newHeight = sw / targetRatio;
+        sy = (sh - newHeight) / 2;
+        sh = newHeight;
+      }
+    } else if (crop === '3:2') {
+      const targetRatio = 3 / 2;
+      const currentRatio = sw / sh;
+      if (currentRatio > targetRatio) {
+        const newWidth = sh * targetRatio;
+        sx = (sw - newWidth) / 2;
+        sw = newWidth;
+      } else {
+        const newHeight = sw / targetRatio;
+        sy = (sh - newHeight) / 2;
+        sh = newHeight;
+      }
+    } else if (crop === '2:3') {
+      const targetRatio = 2 / 3;
       const currentRatio = sw / sh;
       if (currentRatio > targetRatio) {
         const newWidth = sh * targetRatio;
@@ -189,7 +213,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
              <div className="mb-6">
                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 block">Crop</label>
                <div className="grid grid-cols-2 gap-2">
-                  {['original', 'square', 'landscape', 'portrait'].map((c) => (
+                  {['original', 'square', 'landscape', 'portrait', '3:2', '2:3'].map((c) => (
                     <button
                       key={c}
                       onClick={() => setCrop(c)}
@@ -199,7 +223,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
                         : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400'
                       } transition-colors capitalize`}
                     >
-                      {c}
+                      {c === 'landscape' ? '16:9' : c === 'portrait' ? '9:16' : c}
                     </button>
                   ))}
                </div>

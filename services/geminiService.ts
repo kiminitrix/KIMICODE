@@ -92,10 +92,16 @@ export const generateImage = async (
       // Add prompt
       parts.push({ text: prompt });
 
+      // Handle unsupported aspect ratios for Gemini by mapping to closest valid ones
+      // Valid: "1:1", "3:4", "4:3", "9:16", "16:9"
+      let finalAspectRatio = aspectRatio;
+      if (aspectRatio === '3:2') finalAspectRatio = '4:3';
+      if (aspectRatio === '2:3') finalAspectRatio = '3:4';
+
       // Config
       const config: any = {
          imageConfig: {
-           aspectRatio: aspectRatio,
+           aspectRatio: finalAspectRatio,
          }
       };
       

@@ -26,7 +26,9 @@ export enum AspectRatio {
   LANDSCAPE = '16:9',
   PORTRAIT = '9:16',
   STANDARD = '4:3',
-  TALL = '3:4'
+  TALL = '3:4',
+  LANDSCAPE_3_2 = '3:2',
+  PORTRAIT_2_3 = '2:3'
 }
 
 export interface GenerationConfig {
