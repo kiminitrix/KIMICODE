@@ -639,7 +639,7 @@ const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8 flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-bold text-black mb-2">Collection</h1>
+          <h1 className="text-4xl font-bold text-black mb-2">Collectable</h1>
           <p className="text-gray-500">Your personal gallery of AI-generated masterpieces.</p>
         </div>
         <div className="text-sm font-bold text-gold-600">
