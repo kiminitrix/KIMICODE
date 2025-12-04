@@ -274,7 +274,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
              <Button onClick={() => { 
                 setFilter('none'); setCrop('original'); setScale(100); 
              }} variant="ghost" className="w-full" icon={RotateCcw}>
-               Reset All
+               Reset Edits
              </Button>
            </div>
         </div>
