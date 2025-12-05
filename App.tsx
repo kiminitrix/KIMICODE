@@ -7,7 +7,8 @@ import {
   ChevronsUp
 } from 'lucide-react';
 import { 
-  GeneratedImage, AppRoute, ImageModel, AspectRatio 
+  GeneratedImage, AppRoute, ImageModel, AspectRatio,
+  ImaginableState, EditableState, PromptableState
 } from './types';
 import * as GeminiService from './services/geminiService';
 
@@ -326,6 +327,30 @@ export default function App() {
   const [collection, setCollection] = useState<GeneratedImage[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
+  // --- PERSISTENT STATE ---
+  // Imaginable
+  const [imaginableState, setImaginableState] = useState<ImaginableState>({
+    prompt: '',
+    model: ImageModel.GEMINI_FLASH_IMAGE,
+    aspectRatio: AspectRatio.SQUARE,
+    count: 1,
+    refImages: [],
+    generatedResults: []
+  });
+
+  // Editable
+  const [editableState, setEditableState] = useState<EditableState>({
+    baseImage: null,
+    instruction: '',
+    resultImage: null
+  });
+
+  // Promptable
+  const [promptableState, setPromptableState] = useState<PromptableState>({
+    image: null,
+    generatedPrompt: ''
+  });
+
   // Initialize theme from storage to avoid flicker and race conditions
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
@@ -379,15 +404,42 @@ export default function App() {
   const renderContent = () => {
     switch (activeRoute) {
       case AppRoute.IMAGINABLE:
-        return <ImaginablePage onSave={addToCollection} onError={showNotification} />;
+        return (
+          <ImaginablePage 
+            state={imaginableState}
+            setState={setImaginableState}
+            onSave={addToCollection} 
+            onError={showNotification} 
+          />
+        );
       case AppRoute.EDITABLE:
-        return <EditablePage onSave={addToCollection} onError={showNotification} />;
+        return (
+          <EditablePage 
+            state={editableState}
+            setState={setEditableState}
+            onSave={addToCollection} 
+            onError={showNotification} 
+          />
+        );
       case AppRoute.PROMPTABLE:
-        return <PromptablePage onError={showNotification} />;
+        return (
+          <PromptablePage 
+            state={promptableState}
+            setState={setPromptableState}
+            onError={showNotification} 
+          />
+        );
       case AppRoute.COLLECTION:
         return <CollectionPage collection={collection} />;
       default:
-        return <ImaginablePage onSave={addToCollection} onError={showNotification} />;
+        return (
+          <ImaginablePage 
+            state={imaginableState}
+            setState={setImaginableState}
+            onSave={addToCollection} 
+            onError={showNotification} 
+          />
+        );
     }
   };
 
@@ -503,26 +555,40 @@ export default function App() {
 // --- Sub-Pages ---
 
 // 1. IMAGINABLE PAGE
-const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => void, onError: (msg: string) => void }) => {
-  const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState<string>(ImageModel.GEMINI_FLASH_IMAGE);
-  const [aspectRatio, setAspectRatio] = useState<string>(AspectRatio.SQUARE);
-  const [count, setCount] = useState<number>(1);
-  const [refImages, setRefImages] = useState<File[]>([]);
+const ImaginablePage = ({ 
+  state, setState, onSave, onError 
+}: { 
+  state: ImaginableState, 
+  setState: React.Dispatch<React.SetStateAction<ImaginableState>>, 
+  onSave: (img: GeneratedImage) => void, 
+  onError: (msg: string) => void 
+}) => {
+  const { prompt, model, aspectRatio, count, refImages, generatedResults } = state;
+
+  // Local UI State (Does not persist across tabs, but data inputs do)
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedResults, setGeneratedResults] = useState<GeneratedImage[]>([]);
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
   const [upscalingId, setUpscalingId] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setRefImages([...refImages, ...Array.from(e.target.files)]);
+      setState(prev => ({
+        ...prev,
+        refImages: [...prev.refImages, ...Array.from(e.target.files || [])]
+      }));
     }
   };
 
   const removeRefImage = (index: number) => {
-    setRefImages(refImages.filter((_, i) => i !== index));
+    setState(prev => ({
+      ...prev,
+      refImages: prev.refImages.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateState = (updates: Partial<ImaginableState>) => {
+    setState(prev => ({ ...prev, ...updates }));
   };
 
   const handleEnhancePrompt = async () => {
@@ -530,7 +596,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
     setIsGenerating(true);
     try {
       const newPrompt = await GeminiService.enhancePrompt(prompt);
-      setPrompt(newPrompt);
+      updateState({ prompt: newPrompt });
     } catch (error) {
       onError("Failed to enhance prompt. Please try again.");
     } finally {
@@ -541,10 +607,12 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
   const handleGenerate = async () => {
     if (!prompt) return;
     setIsGenerating(true);
-    setGeneratedResults([]);
+    // Note: We don't clear generatedResults here so previous results stay while new ones load, 
+    // or we could clear them if that's the desired UX. For "sticking inputs", let's keep previous results visible or clear?
+    // Let's clear to show fresh results for this batch, or append? Usually clear for a new 'Generate' action.
+    updateState({ generatedResults: [] });
 
     try {
-      // Loop for multiple images if count > 1 (simulated batching for APIs that don't support batch)
       const batchPromises = [];
       for (let i = 0; i < count; i++) {
         batchPromises.push(GeminiService.generateImage(model, prompt, aspectRatio, refImages));
@@ -566,10 +634,9 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
         aspectRatio
       }));
 
-      setGeneratedResults(newImages);
+      updateState({ generatedResults: newImages });
     } catch (error: any) {
       console.error("Generation error:", error);
-      // More user friendly error handling
       if (error.message?.includes('400') || error.message?.includes('500') || error.message?.includes('xhr')) {
         onError("Service momentarily unavailable or request blocked. Please retry.");
       } else {
@@ -581,7 +648,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
   };
 
   const handleSaveEdited = (newImg: GeneratedImage) => {
-    setGeneratedResults(prev => [newImg, ...prev]);
+    updateState({ generatedResults: [newImg, ...generatedResults] });
     onError("Edits applied successfully");
   };
 
@@ -596,7 +663,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
         date: Date.now(),
         prompt: img.prompt + ' (Upscaled)'
       };
-      setGeneratedResults(prev => [upscaledImage, ...prev]);
+      updateState({ generatedResults: [upscaledImage, ...generatedResults] });
       onError("Image upscaled to 2K successfully!");
     } catch (e) {
       console.error("Upscale error:", e);
@@ -621,7 +688,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Prompt</label>
               <textarea 
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onChange={(e) => updateState({ prompt: e.target.value })}
                 className="w-full p-4 bg-silver-100 dark:bg-zinc-800 rounded-xl border-none focus:ring-2 focus:ring-gold-400 min-h-[120px] resize-none text-sm dark:text-white dark:placeholder-gray-500 transition-colors"
                 placeholder="A futuristic city with silver towers and golden bridges..."
               />
@@ -664,7 +731,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
                    <div className="relative">
                      <select 
                        value={model}
-                       onChange={(e) => setModel(e.target.value)}
+                       onChange={(e) => updateState({ model: e.target.value })}
                        className="w-full p-3 bg-silver-100 dark:bg-zinc-800 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none dark:text-white transition-colors"
                      >
                        <option value={ImageModel.GEMINI_FLASH_IMAGE}>Gemini Flash (Fast)</option>
@@ -679,7 +746,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
                    <div className="relative">
                      <select 
                        value={aspectRatio}
-                       onChange={(e) => setAspectRatio(e.target.value)}
+                       onChange={(e) => updateState({ aspectRatio: e.target.value })}
                        className="w-full p-3 bg-silver-100 dark:bg-zinc-800 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none dark:text-white transition-colors"
                      >
                        {Object.values(AspectRatio).map(r => (
@@ -697,7 +764,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
                   {[1, 2, 3, 4].map(n => (
                     <button 
                       key={n}
-                      onClick={() => setCount(n)}
+                      onClick={() => updateState({ count: n })}
                       className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
                         count === n 
                         ? 'bg-black text-white dark:bg-gold-500 dark:text-black' 
@@ -796,24 +863,35 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
 };
 
 // 2. EDITABLE PAGE
-const EditablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => void, onError: (msg: string) => void }) => {
-  const [baseImage, setBaseImage] = useState<File | null>(null);
-  const [instruction, setInstruction] = useState('');
+const EditablePage = ({ 
+  state, setState, onSave, onError 
+}: { 
+  state: EditableState, 
+  setState: React.Dispatch<React.SetStateAction<EditableState>>, 
+  onSave: (img: GeneratedImage) => void, 
+  onError: (msg: string) => void 
+}) => {
+  const { baseImage, instruction, resultImage } = state;
   const [isProcessing, setIsProcessing] = useState(false);
-  const [resultImage, setResultImage] = useState<GeneratedImage | null>(null);
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+
+  const updateState = (updates: Partial<EditableState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
 
   const handleEdit = async () => {
     if (!baseImage || !instruction) return;
     setIsProcessing(true);
     try {
       const url = await GeminiService.editImage(baseImage, instruction);
-      setResultImage({
-        id: Date.now().toString(),
-        url,
-        prompt: instruction,
-        model: ImageModel.GEMINI_FLASH_IMAGE,
-        date: Date.now()
+      updateState({
+        resultImage: {
+          id: Date.now().toString(),
+          url,
+          prompt: instruction,
+          model: ImageModel.GEMINI_FLASH_IMAGE,
+          date: Date.now()
+        }
       });
     } catch (e: any) {
       console.error(e);
@@ -840,7 +918,7 @@ const EditablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => vo
             {baseImage ? (
               <>
                  <img src={URL.createObjectURL(baseImage)} alt="Original" className="w-full h-full object-contain" />
-                 <button onClick={() => setBaseImage(null)} className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button onClick={() => updateState({ baseImage: null })} className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                    <Trash2 size={16} />
                  </button>
               </>
@@ -848,7 +926,7 @@ const EditablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => vo
               <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
                 <Plus size={40} />
                 <span className="font-semibold">Upload Image to Edit</span>
-                <input type="file" accept="image/*" onChange={(e) => e.target.files && setBaseImage(e.target.files[0])} className="hidden" />
+                <input type="file" accept="image/*" onChange={(e) => e.target.files && updateState({ baseImage: e.target.files[0] })} className="hidden" />
               </label>
             )}
           </div>
@@ -858,7 +936,7 @@ const EditablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => vo
              <input 
                type="text" 
                value={instruction}
-               onChange={(e) => setInstruction(e.target.value)}
+               onChange={(e) => updateState({ instruction: e.target.value })}
                placeholder="e.g. 'Add a red hat to the person' or 'Make it snowy'"
                className="w-full p-4 bg-silver-100 dark:bg-zinc-800 rounded-xl outline-none focus:ring-2 focus:ring-gold-400 dark:text-white dark:placeholder-gray-500 transition-colors"
              />
@@ -901,18 +979,27 @@ const EditablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => vo
 };
 
 // 3. PROMPTABLE PAGE
-const PromptablePage = ({ onError }: { onError: (msg: string) => void }) => {
-  const [image, setImage] = useState<File | null>(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState('');
+const PromptablePage = ({ 
+  state, setState, onError 
+}: { 
+  state: PromptableState, 
+  setState: React.Dispatch<React.SetStateAction<PromptableState>>, 
+  onError: (msg: string) => void 
+}) => {
+  const { image, generatedPrompt } = state;
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const updateState = (updates: Partial<PromptableState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
 
   const handleAnalyze = async (type: 'image' | 'video') => {
     if (!image) return;
     setIsAnalyzing(true);
-    setGeneratedPrompt('');
+    updateState({ generatedPrompt: '' });
     try {
       const text = await GeminiService.analyzeImageForPrompt(image, type);
-      setGeneratedPrompt(text);
+      updateState({ generatedPrompt: text });
     } catch (e: any) {
       if (e.message?.includes('xhr')) {
         onError("Analysis interrupted. Network unstable.");
@@ -942,7 +1029,7 @@ const PromptablePage = ({ onError }: { onError: (msg: string) => void }) => {
             {image ? (
                <div className="relative w-full h-full">
                   <img src={URL.createObjectURL(image)} alt="Analysis Source" className="w-full h-full object-contain rounded-lg" />
-                  <button onClick={() => setImage(null)} className="absolute top-2 right-2 p-2 bg-black/50 text-white hover:bg-red-500 rounded-full transition-colors">
+                  <button onClick={() => updateState({ image: null })} className="absolute top-2 right-2 p-2 bg-black/50 text-white hover:bg-red-500 rounded-full transition-colors">
                     <X size={20} />
                   </button>
                </div>
@@ -950,7 +1037,7 @@ const PromptablePage = ({ onError }: { onError: (msg: string) => void }) => {
               <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
                 <ImageIcon size={48} />
                 <span className="font-semibold">Drop Image for Analysis</span>
-                <input type="file" accept="image/*" onChange={(e) => e.target.files && setImage(e.target.files[0])} className="hidden" />
+                <input type="file" accept="image/*" onChange={(e) => e.target.files && updateState({ image: e.target.files[0] })} className="hidden" />
               </label>
             )}
            </div>

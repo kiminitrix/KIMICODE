@@ -38,3 +38,23 @@ export interface GenerationConfig {
   numberOfImages: number;
   referenceImages: File[];
 }
+
+export interface ImaginableState {
+  prompt: string;
+  model: string;
+  aspectRatio: string;
+  count: number;
+  refImages: File[];
+  generatedResults: GeneratedImage[];
+}
+
+export interface EditableState {
+  baseImage: File | null;
+  instruction: string;
+  resultImage: GeneratedImage | null;
+}
+
+export interface PromptableState {
+  image: File | null;
+  generatedPrompt: string;
+}
