@@ -3,7 +3,8 @@ import {
   Menu, X, Image as ImageIcon, Wand2, Edit, PlaySquare, 
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
   Trash2, Loader2, Sparkles, Layers, Video, Film,
-  Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle
+  Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle,
+  ChevronsUp
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio 
@@ -13,7 +14,7 @@ import * as GeminiService from './services/geminiService';
 // --- UI Components ---
 
 const Button = ({ 
-  onClick, children, variant = 'primary', className = '', disabled = false, icon: Icon 
+  onClick, children, variant = 'primary', className = '', disabled = false, icon: Icon, title 
 }: any) => {
   const baseStyle = "flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed";
   
@@ -30,6 +31,7 @@ const Button = ({
       onClick={onClick} 
       disabled={disabled}
       className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`}
+      title={title}
     >
       {Icon && <Icon size={18} />}
       {children}
@@ -193,6 +195,25 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
 
   if (!isOpen) return null;
 
+  // Tooltip descriptions
+  const cropDescriptions: Record<string, string> = {
+    original: "Keep original dimensions",
+    square: "1:1 - Good for social media avatars",
+    landscape: "16:9 - Cinematic widescreen",
+    portrait: "9:16 - Mobile stories format",
+    '3:2': "Classic photography landscape",
+    '2:3': "Classic photography portrait"
+  };
+
+  const filterDescriptions: Record<string, string> = {
+    none: "No filter",
+    grayscale: "Black and white",
+    sepia: "Antique brown tone",
+    warm: "Sunny, golden tones",
+    cool: "Calm, blueish tones",
+    vintage: "Retro faded look"
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[85vh]">
@@ -210,12 +231,13 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
              
              {/* Crop */}
              <div className="mb-6">
-               <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Crop</label>
+               <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block" title="Choose an aspect ratio to crop your image">Crop</label>
                <div className="grid grid-cols-2 gap-2">
                   {['original', 'square', 'landscape', 'portrait', '3:2', '2:3'].map((c) => (
                     <button
                       key={c}
                       onClick={() => setCrop(c)}
+                      title={cropDescriptions[c] || c}
                       className={`px-3 py-2 text-xs font-semibold rounded border ${
                         crop === c 
                         ? 'bg-black text-white border-black dark:bg-gold-500 dark:text-black dark:border-gold-500' 
@@ -231,7 +253,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
              {/* Resize */}
              <div className="mb-6">
                <div className="flex justify-between items-center mb-2">
-                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Resize / Scale</label>
+                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide" title="Adjust the resolution of the output image">Resize / Scale</label>
                  <span className="text-xs font-mono text-gold-600 dark:text-gold-400">{scale}%</span>
                </div>
                <input 
@@ -240,6 +262,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
                  max="100" 
                  value={scale} 
                  onChange={(e) => setScale(Number(e.target.value))}
+                 title={`Resize image to ${scale}% of original size`}
                  className="w-full h-2 bg-silver-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-gold-500"
                />
              </div>
@@ -254,6 +277,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
                  <button
                    key={f}
                    onClick={() => setFilter(f)}
+                   title={filterDescriptions[f] || `Apply ${f} filter`}
                    className={`px-3 py-2 text-xs font-semibold rounded border ${
                      filter === f 
                      ? 'bg-black text-white border-black dark:bg-gold-500 dark:text-black dark:border-gold-500' 
@@ -267,12 +291,24 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
            </div>
 
            <div className="pt-6 border-t border-silver-200 dark:border-zinc-800 flex flex-col gap-3">
-             <Button onClick={handleSave} variant="gold" className="w-full" icon={Check}>
+             <Button 
+                onClick={handleSave} 
+                variant="gold" 
+                className="w-full" 
+                icon={Check}
+                title="Save changes and add to collection"
+             >
                Save Changes
              </Button>
-             <Button onClick={() => { 
-                setFilter('none'); setCrop('original'); setScale(100); 
-             }} variant="ghost" className="w-full" icon={RotateCcw}>
+             <Button 
+                onClick={() => { 
+                    setFilter('none'); setCrop('original'); setScale(100); 
+                }} 
+                variant="ghost" 
+                className="w-full" 
+                icon={RotateCcw}
+                title="Revert all cropping, resizing, and filters"
+             >
                Reset Edits
              </Button>
            </div>
@@ -477,6 +513,7 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
   const [generatedResults, setGeneratedResults] = useState<GeneratedImage[]>([]);
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
+  const [upscalingId, setUpscalingId] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -546,6 +583,27 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
   const handleSaveEdited = (newImg: GeneratedImage) => {
     setGeneratedResults(prev => [newImg, ...prev]);
     onError("Edits applied successfully");
+  };
+
+  const handleUpscale = async (img: GeneratedImage) => {
+    setUpscalingId(img.id);
+    try {
+      const upscaledUrl = await GeminiService.upscaleImage(img.url, img.aspectRatio);
+      const upscaledImage: GeneratedImage = {
+        ...img,
+        id: Date.now().toString() + Math.random(),
+        url: upscaledUrl,
+        date: Date.now(),
+        prompt: img.prompt + ' (Upscaled)'
+      };
+      setGeneratedResults(prev => [upscaledImage, ...prev]);
+      onError("Image upscaled to 2K successfully!");
+    } catch (e) {
+      console.error("Upscale error:", e);
+      onError("Failed to upscale image. Please try again.");
+    } finally {
+      setUpscalingId(null);
+    }
   };
 
   return (
@@ -687,6 +745,14 @@ const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => 
                  <img src={img.url} alt="Generated" className="w-full h-auto object-cover" />
                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
                     <div className="flex gap-2 justify-end">
+                       <button 
+                         onClick={() => handleUpscale(img)}
+                         disabled={upscalingId === img.id}
+                         className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-all"
+                         title="Upscale to 2K Resolution"
+                       >
+                         {upscalingId === img.id ? <Loader2 size={20} className="animate-spin" /> : <ChevronsUp size={20} />}
+                       </button>
                        <button 
                          onClick={() => setEditingImage(img)} 
                          className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-all"

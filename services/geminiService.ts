@@ -170,6 +170,57 @@ export const editImage = async (
   }
 };
 
+export const upscaleImage = async (
+  base64Url: string,
+  aspectRatio: string = '1:1'
+): Promise<string> => {
+  try {
+    // Extract base64 from data URL
+    const base64 = base64Url.includes(',') ? base64Url.split(',')[1] : base64Url;
+    
+    // Use Gemini Pro Image for high quality 2K upscaling
+    const model = ImageModel.GEMINI_PRO_IMAGE;
+    
+    // Map custom aspect ratios to closest supported ones
+    let finalAspectRatio = aspectRatio;
+    if (aspectRatio === '3:2') finalAspectRatio = '4:3';
+    if (aspectRatio === '2:3') finalAspectRatio = '3:4';
+
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: base64,
+              mimeType: 'image/png', // Assumption for base64 data
+            }
+          },
+          {
+            text: "Upscale this image to 2K resolution. Enhance fine details, textures, and sharpness while maintaining the original composition and artistic style."
+          }
+        ]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: finalAspectRatio,
+          imageSize: '2K' // Force 2K upscaling
+        }
+      }
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData?.data) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("Upscaling failed to return an image.");
+  } catch (error) {
+    console.error("Error upscaling image:", error);
+    throw error;
+  }
+};
+
 export const analyzeImageForPrompt = async (
   image: File,
   type: 'image' | 'video'
