@@ -3,7 +3,7 @@ import {
   Menu, X, Image as ImageIcon, Wand2, Edit, PlaySquare, 
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
   Trash2, Loader2, Sparkles, Layers, Video, Film,
-  Crop, Sliders, Check, RotateCcw
+  Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio 
@@ -16,11 +16,13 @@ const Button = ({
   onClick, children, variant = 'primary', className = '', disabled = false, icon: Icon 
 }: any) => {
   const baseStyle = "flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  // Updated variants for better Dark Mode support
   const variants = {
-    primary: "bg-black text-white hover:bg-zinc-800 shadow-lg hover:shadow-xl",
-    secondary: "bg-white text-black border-2 border-gray-100 hover:border-gold-400 hover:text-gold-600 shadow-sm",
-    gold: "bg-gold-500 text-white hover:bg-gold-600 shadow-lg hover:shadow-gold-400/50",
-    ghost: "text-gray-500 hover:text-black hover:bg-silver-100"
+    primary: "bg-black text-white hover:bg-zinc-800 shadow-lg hover:shadow-xl dark:bg-gold-500 dark:text-black dark:hover:bg-gold-400",
+    secondary: "bg-white text-black border-2 border-gray-100 hover:border-gold-400 hover:text-gold-600 shadow-sm dark:bg-transparent dark:text-silver-200 dark:border-zinc-700 dark:hover:border-gold-500 dark:hover:text-gold-400",
+    gold: "bg-gold-500 text-white hover:bg-gold-600 shadow-lg hover:shadow-gold-400/50 dark:bg-gold-600 dark:hover:bg-gold-500",
+    ghost: "text-gray-500 hover:text-black hover:bg-silver-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-zinc-800"
   };
 
   return (
@@ -36,7 +38,7 @@ const Button = ({
 };
 
 const Card = ({ children, className = '' }: any) => (
-  <div className={`bg-white rounded-2xl border border-silver-200 shadow-xl shadow-silver-200/50 overflow-hidden ${className}`}>
+  <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-silver-200 dark:border-zinc-800 shadow-xl shadow-silver-200/50 dark:shadow-black/50 overflow-hidden transition-colors duration-300 ${className}`}>
     {children}
   </div>
 );
@@ -157,7 +159,6 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
     canvasRef.current.height = sh * scaleFactor;
 
     // 3. Apply Filters & Draw
-    // Note: ctx.filter is supported in modern browsers
     let filterString = 'none';
     switch (filter) {
       case 'grayscale': filterString = 'grayscale(100%)'; break;
@@ -169,8 +170,6 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
     }
     
     ctx.filter = filterString;
-    
-    // Smooth scaling
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
@@ -196,22 +195,22 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[85vh]">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[85vh]">
         {/* Canvas Area */}
-        <div className="flex-1 bg-silver-100 p-8 flex items-center justify-center overflow-auto min-h-[400px]">
-           <canvas ref={canvasRef} className="max-w-full max-h-full shadow-lg border border-silver-300 bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')]" />
+        <div className="flex-1 bg-silver-100 dark:bg-zinc-950 p-8 flex items-center justify-center overflow-auto min-h-[400px]">
+           <canvas ref={canvasRef} className="max-w-full max-h-full shadow-lg border border-silver-300 dark:border-zinc-800 bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')]" />
         </div>
 
         {/* Controls Sidebar */}
-        <div className="w-full md:w-80 bg-white p-6 border-l border-silver-200 overflow-y-auto space-y-8">
+        <div className="w-full md:w-80 bg-white dark:bg-zinc-900 p-6 border-l border-silver-200 dark:border-zinc-800 overflow-y-auto space-y-8">
            <div>
-             <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
+             <h3 className="text-lg font-bold text-black dark:text-white mb-4 flex items-center gap-2">
                <Sliders size={20} className="text-gold-500" /> Adjustments
              </h3>
              
              {/* Crop */}
              <div className="mb-6">
-               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 block">Crop</label>
+               <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">Crop</label>
                <div className="grid grid-cols-2 gap-2">
                   {['original', 'square', 'landscape', 'portrait', '3:2', '2:3'].map((c) => (
                     <button
@@ -219,8 +218,8 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
                       onClick={() => setCrop(c)}
                       className={`px-3 py-2 text-xs font-semibold rounded border ${
                         crop === c 
-                        ? 'bg-black text-white border-black' 
-                        : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400'
+                        ? 'bg-black text-white border-black dark:bg-gold-500 dark:text-black dark:border-gold-500' 
+                        : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400 dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700 dark:hover:border-gold-500'
                       } transition-colors capitalize`}
                     >
                       {c === 'landscape' ? '16:9' : c === 'portrait' ? '9:16' : c}
@@ -232,8 +231,8 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
              {/* Resize */}
              <div className="mb-6">
                <div className="flex justify-between items-center mb-2">
-                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Resize / Scale</label>
-                 <span className="text-xs font-mono text-gold-600">{scale}%</span>
+                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Resize / Scale</label>
+                 <span className="text-xs font-mono text-gold-600 dark:text-gold-400">{scale}%</span>
                </div>
                <input 
                  type="range" 
@@ -241,13 +240,13 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
                  max="100" 
                  value={scale} 
                  onChange={(e) => setScale(Number(e.target.value))}
-                 className="w-full h-2 bg-silver-200 rounded-lg appearance-none cursor-pointer accent-gold-500"
+                 className="w-full h-2 bg-silver-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-gold-500"
                />
              </div>
            </div>
 
            <div>
-             <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
+             <h3 className="text-lg font-bold text-black dark:text-white mb-4 flex items-center gap-2">
                <Sparkles size={20} className="text-gold-500" /> Filters
              </h3>
              <div className="grid grid-cols-2 gap-2">
@@ -257,8 +256,8 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
                    onClick={() => setFilter(f)}
                    className={`px-3 py-2 text-xs font-semibold rounded border ${
                      filter === f 
-                     ? 'bg-black text-white border-black' 
-                     : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400'
+                     ? 'bg-black text-white border-black dark:bg-gold-500 dark:text-black dark:border-gold-500' 
+                     : 'bg-white text-gray-600 border-silver-200 hover:border-gold-400 dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700 dark:hover:border-gold-500'
                    } transition-colors capitalize`}
                  >
                    {f}
@@ -267,7 +266,7 @@ const ImageEditorModal = ({ image, isOpen, onClose, onSave }: { image: Generated
              </div>
            </div>
 
-           <div className="pt-6 border-t border-silver-200 flex flex-col gap-3">
+           <div className="pt-6 border-t border-silver-200 dark:border-zinc-800 flex flex-col gap-3">
              <Button onClick={handleSave} variant="gold" className="w-full" icon={Check}>
                Save Changes
              </Button>
@@ -291,7 +290,27 @@ export default function App() {
   const [collection, setCollection] = useState<GeneratedImage[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load collection from local storage on mount
+  // Initialize theme from storage to avoid flicker and race conditions
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('kimicode_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    }
+    return 'light';
+  });
+
+  // Apply Theme Effect
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('kimicode_theme', theme);
+  }, [theme]);
+
+  // Load collection
   useEffect(() => {
     const saved = localStorage.getItem('kimicode_collection');
     if (saved) {
@@ -302,6 +321,10 @@ export default function App() {
       }
     }
   }, []);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   // Save collection handler
   const addToCollection = (img: GeneratedImage) => {
@@ -320,37 +343,40 @@ export default function App() {
   const renderContent = () => {
     switch (activeRoute) {
       case AppRoute.IMAGINABLE:
-        return <ImaginablePage onSave={addToCollection} />;
+        return <ImaginablePage onSave={addToCollection} onError={showNotification} />;
       case AppRoute.EDITABLE:
-        return <EditablePage onSave={addToCollection} />;
+        return <EditablePage onSave={addToCollection} onError={showNotification} />;
       case AppRoute.PROMPTABLE:
-        return <PromptablePage />;
+        return <PromptablePage onError={showNotification} />;
       case AppRoute.COLLECTION:
         return <CollectionPage collection={collection} />;
       default:
-        return <ImaginablePage onSave={addToCollection} />;
+        return <ImaginablePage onSave={addToCollection} onError={showNotification} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-silver-100 flex flex-col md:flex-row font-sans text-gray-800">
+    <div className="min-h-screen bg-silver-100 dark:bg-zinc-950 flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-200 transition-colors duration-300">
       
       {/* Mobile Header */}
-      <div className="md:hidden bg-white p-4 flex justify-between items-center shadow-md z-20 sticky top-0">
+      <div className="md:hidden bg-white dark:bg-zinc-900 p-4 flex justify-between items-center shadow-md z-20 sticky top-0 transition-colors duration-300">
         <div className="text-2xl font-black tracking-tighter flex items-center gap-2">
           <span className="bg-gradient-to-br from-gold-400 to-gold-600 text-transparent bg-clip-text">KIMI</span>
-          <span className="text-black">CODE</span>
+          <span className="text-black dark:text-white">CODE</span>
         </div>
+        <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-400 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
+          {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
+        </button>
       </div>
 
       {/* Sidebar Navigation */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-silver-200 h-screen sticky top-0 z-30">
+      <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-zinc-900 border-r border-silver-200 dark:border-zinc-800 h-screen sticky top-0 z-30 transition-colors duration-300">
         <div className="p-8">
           <div className="text-3xl font-black tracking-tighter flex items-center gap-2 mb-10">
-             <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white">K</div>
+             <div className="w-10 h-10 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black">K</div>
              <div className="flex flex-col leading-none">
-               <span className="text-black text-lg">KIMI</span>
-               <span className="text-gold-500 text-sm">CODE</span>
+               <span className="text-black dark:text-white text-lg">KIMI</span>
+               <span className="text-gold-500 dark:text-gold-400 text-sm">CODE</span>
              </div>
           </div>
           
@@ -366,8 +392,8 @@ export default function App() {
                 onClick={() => setActiveRoute(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
                   activeRoute === item.id
-                    ? 'bg-black text-white shadow-lg shadow-black/20'
-                    : 'text-gray-500 hover:bg-silver-100 hover:text-black'
+                    ? 'bg-black text-white shadow-lg shadow-black/20 dark:bg-gold-500 dark:text-black dark:shadow-gold-500/20'
+                    : 'text-gray-500 hover:bg-silver-100 hover:text-black dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-white'
                 }`}
               >
                 <item.icon size={20} />
@@ -377,12 +403,22 @@ export default function App() {
           </nav>
         </div>
 
-        <div className="mt-auto p-8 border-t border-silver-100">
-          <div className="bg-gradient-to-br from-silver-100 to-white p-4 rounded-xl border border-silver-200">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Status</p>
+        <div className="mt-auto p-8 border-t border-silver-100 dark:border-zinc-800 space-y-4">
+          <button 
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-silver-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-silver-200 dark:hover:bg-zinc-700 transition-colors"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+            </span>
+          </button>
+
+          <div className="bg-gradient-to-br from-silver-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-4 rounded-xl border border-silver-200 dark:border-zinc-700">
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Status</p>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-medium text-black">Systems Operational</span>
+              <span className="text-sm font-medium text-black dark:text-white">Systems Operational</span>
             </div>
           </div>
         </div>
@@ -403,8 +439,8 @@ export default function App() {
                 onClick={() => setActiveRoute(item.id)}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold ${
                   activeRoute === item.id
-                    ? 'bg-black text-white'
-                    : 'bg-white text-gray-500 border border-silver-200'
+                    ? 'bg-black text-white dark:bg-gold-500 dark:text-black'
+                    : 'bg-white text-gray-500 border border-silver-200 dark:bg-zinc-800 dark:text-gray-400 dark:border-zinc-700'
                 }`}
               >
                 {item.label}
@@ -419,9 +455,9 @@ export default function App() {
 
       {/* Notification Toast */}
       {notification && (
-        <div className="fixed bottom-6 right-6 bg-black text-white px-6 py-3 rounded-lg shadow-2xl z-50 flex items-center gap-2 animate-bounce">
-          <Sparkles size={16} className="text-gold-400" />
-          {notification}
+        <div className="fixed bottom-6 right-6 bg-zinc-900/95 dark:bg-white/95 backdrop-blur text-white dark:text-zinc-900 px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-3 border border-white/10 dark:border-black/5 transform transition-all duration-300">
+          <Sparkles size={16} className="text-gold-500" />
+          <span className="font-medium text-sm">{notification}</span>
         </div>
       )}
     </div>
@@ -431,7 +467,7 @@ export default function App() {
 // --- Sub-Pages ---
 
 // 1. IMAGINABLE PAGE
-const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => {
+const ImaginablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => void, onError: (msg: string) => void }) => {
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState<string>(ImageModel.GEMINI_FLASH_IMAGE);
   const [aspectRatio, setAspectRatio] = useState<string>(AspectRatio.SQUARE);
@@ -455,9 +491,14 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
   const handleEnhancePrompt = async () => {
     if (!prompt) return;
     setIsGenerating(true);
-    const newPrompt = await GeminiService.enhancePrompt(prompt);
-    setPrompt(newPrompt);
-    setIsGenerating(false);
+    try {
+      const newPrompt = await GeminiService.enhancePrompt(prompt);
+      setPrompt(newPrompt);
+    } catch (error) {
+      onError("Failed to enhance prompt. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -475,6 +516,10 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
       const resultsNested = await Promise.all(batchPromises);
       const allImages = resultsNested.flat();
 
+      if (allImages.length === 0) {
+        throw new Error("No images generated.");
+      }
+
       const newImages: GeneratedImage[] = allImages.map(url => ({
         id: Date.now().toString() + Math.random().toString(),
         url,
@@ -485,8 +530,14 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
       }));
 
       setGeneratedResults(newImages);
-    } catch (error) {
-      alert("Generation failed. Please try again or check your API limit.");
+    } catch (error: any) {
+      console.error("Generation error:", error);
+      // More user friendly error handling
+      if (error.message?.includes('400') || error.message?.includes('500') || error.message?.includes('xhr')) {
+        onError("Service momentarily unavailable or request blocked. Please retry.");
+      } else {
+        onError("Generation failed. Please try again or check your prompt.");
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -494,13 +545,14 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
 
   const handleSaveEdited = (newImg: GeneratedImage) => {
     setGeneratedResults(prev => [newImg, ...prev]);
+    onError("Edits applied successfully");
   };
 
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-black mb-2">Imaginable</h1>
-        <p className="text-gray-500">Transform your ideas into visual reality using state-of-the-art AI.</p>
+        <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Imaginable</h1>
+        <p className="text-gray-500 dark:text-gray-400">Transform your ideas into visual reality using state-of-the-art AI.</p>
       </header>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -508,18 +560,18 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
         <div className="lg:col-span-1 space-y-6">
           <Card className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Prompt</label>
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Prompt</label>
               <textarea 
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="w-full p-4 bg-silver-100 rounded-xl border-none focus:ring-2 focus:ring-gold-400 min-h-[120px] resize-none text-sm"
+                className="w-full p-4 bg-silver-100 dark:bg-zinc-800 rounded-xl border-none focus:ring-2 focus:ring-gold-400 min-h-[120px] resize-none text-sm dark:text-white dark:placeholder-gray-500 transition-colors"
                 placeholder="A futuristic city with silver towers and golden bridges..."
               />
               <div className="mt-2 flex justify-end">
                 <button 
                   onClick={handleEnhancePrompt}
                   disabled={isGenerating || !prompt}
-                  className="text-xs font-semibold text-gold-600 hover:text-gold-500 flex items-center gap-1"
+                  className="text-xs font-semibold text-gold-600 hover:text-gold-500 dark:text-gold-500 dark:hover:text-gold-400 flex items-center gap-1"
                 >
                   <Wand2 size={12} /> Enhance Prompt
                 </button>
@@ -528,10 +580,10 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Reference Images</label>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Reference Images</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {refImages.map((file, idx) => (
-                    <div key={idx} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-silver-200">
+                    <div key={idx} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-silver-200 dark:border-zinc-700">
                       <img src={URL.createObjectURL(file)} alt="ref" className="w-full h-full object-cover" />
                       <button 
                         onClick={() => removeRefImage(idx)}
@@ -541,8 +593,8 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
                       </button>
                     </div>
                   ))}
-                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-silver-300 flex items-center justify-center cursor-pointer hover:border-gold-400 hover:bg-gold-50 transition-colors">
-                    <Plus size={20} className="text-gray-400" />
+                  <label className="w-16 h-16 rounded-lg border-2 border-dashed border-silver-300 dark:border-zinc-700 flex items-center justify-center cursor-pointer hover:border-gold-400 dark:hover:border-gold-500 hover:bg-gold-50 dark:hover:bg-zinc-800 transition-colors">
+                    <Plus size={20} className="text-gray-400 dark:text-gray-500" />
                     <input type="file" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
                   </label>
                 </div>
@@ -550,12 +602,12 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Model</label>
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Model</label>
                    <div className="relative">
                      <select 
                        value={model}
                        onChange={(e) => setModel(e.target.value)}
-                       className="w-full p-3 bg-silver-100 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none"
+                       className="w-full p-3 bg-silver-100 dark:bg-zinc-800 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none dark:text-white transition-colors"
                      >
                        <option value={ImageModel.GEMINI_FLASH_IMAGE}>Gemini Flash (Fast)</option>
                        <option value={ImageModel.GEMINI_PRO_IMAGE}>Gemini Pro (Quality)</option>
@@ -565,12 +617,12 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
                    </div>
                 </div>
                 <div>
-                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Ratio</label>
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Ratio</label>
                    <div className="relative">
                      <select 
                        value={aspectRatio}
                        onChange={(e) => setAspectRatio(e.target.value)}
-                       className="w-full p-3 bg-silver-100 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none"
+                       className="w-full p-3 bg-silver-100 dark:bg-zinc-800 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none dark:text-white transition-colors"
                      >
                        {Object.values(AspectRatio).map(r => (
                          <option key={r} value={r}>{r}</option>
@@ -582,14 +634,16 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Count</label>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Count</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4].map(n => (
                     <button 
                       key={n}
                       onClick={() => setCount(n)}
                       className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                        count === n ? 'bg-black text-white' : 'bg-silver-100 text-gray-500 hover:bg-silver-200'
+                        count === n 
+                        ? 'bg-black text-white dark:bg-gold-500 dark:text-black' 
+                        : 'bg-silver-100 text-gray-500 hover:bg-silver-200 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700'
                       }`}
                     >
                       {n}
@@ -614,8 +668,8 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
         {/* Results */}
         <div className="lg:col-span-2">
            {generatedResults.length === 0 && !isGenerating && (
-             <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-gray-300 border-2 border-dashed border-silver-200 rounded-2xl">
-               <ImageIcon size={64} className="mb-4 text-silver-300" />
+             <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-gray-300 dark:text-gray-600 border-2 border-dashed border-silver-200 dark:border-zinc-800 rounded-2xl transition-colors">
+               <ImageIcon size={64} className="mb-4 text-silver-300 dark:text-zinc-700" />
                <p className="text-lg font-medium">Ready to create masterpieces</p>
              </div>
            )}
@@ -623,13 +677,13 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
            {isGenerating && generatedResults.length === 0 && (
              <div className="h-full min-h-[400px] flex flex-col items-center justify-center">
                <Loader2 size={48} className="animate-spin text-gold-500 mb-4" />
-               <p className="text-gray-400 animate-pulse">Consulting the AI muses...</p>
+               <p className="text-gray-400 dark:text-gray-500 animate-pulse">Consulting the AI muses...</p>
              </div>
            )}
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              {generatedResults.map((img) => (
-               <div key={img.id} className="group relative bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
+               <div key={img.id} className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
                  <img src={img.url} alt="Generated" className="w-full h-auto object-cover" />
                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
                     <div className="flex gap-2 justify-end">
@@ -676,7 +730,7 @@ const ImaginablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) =
 };
 
 // 2. EDITABLE PAGE
-const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => {
+const EditablePage = ({ onSave, onError }: { onSave: (img: GeneratedImage) => void, onError: (msg: string) => void }) => {
   const [baseImage, setBaseImage] = useState<File | null>(null);
   const [instruction, setInstruction] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -695,8 +749,13 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
         model: ImageModel.GEMINI_FLASH_IMAGE,
         date: Date.now()
       });
-    } catch (e) {
-      alert("Editing failed. Try a clearer image or instruction.");
+    } catch (e: any) {
+      console.error(e);
+      if (e.message?.includes('xhr')) {
+        onError("Network error during editing. Please try a smaller image.");
+      } else {
+        onError("Editing failed. Try a clearer image or instruction.");
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -705,13 +764,13 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-black mb-2">Editable</h1>
-        <p className="text-gray-500">Modify existing images with natural language instructions.</p>
+        <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Editable</h1>
+        <p className="text-gray-500 dark:text-gray-400">Modify existing images with natural language instructions.</p>
       </header>
 
       <div className="grid lg:grid-cols-2 gap-8">
         <Card className="p-6 flex flex-col gap-6">
-          <div className="flex-1 min-h-[300px] border-2 border-dashed border-silver-300 rounded-xl bg-silver-100 flex items-center justify-center relative overflow-hidden group">
+          <div className="flex-1 min-h-[300px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden group transition-colors">
             {baseImage ? (
               <>
                  <img src={URL.createObjectURL(baseImage)} alt="Original" className="w-full h-full object-contain" />
@@ -720,7 +779,7 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
                  </button>
               </>
             ) : (
-              <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 hover:text-gold-500 transition-colors">
+              <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
                 <Plus size={40} />
                 <span className="font-semibold">Upload Image to Edit</span>
                 <input type="file" accept="image/*" onChange={(e) => e.target.files && setBaseImage(e.target.files[0])} className="hidden" />
@@ -729,13 +788,13 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
           </div>
           
           <div className="space-y-4">
-             <label className="block text-sm font-bold text-gray-700">Instruction</label>
+             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Instruction</label>
              <input 
                type="text" 
                value={instruction}
                onChange={(e) => setInstruction(e.target.value)}
                placeholder="e.g. 'Add a red hat to the person' or 'Make it snowy'"
-               className="w-full p-4 bg-silver-100 rounded-xl outline-none focus:ring-2 focus:ring-gold-400"
+               className="w-full p-4 bg-silver-100 dark:bg-zinc-800 rounded-xl outline-none focus:ring-2 focus:ring-gold-400 dark:text-white dark:placeholder-gray-500 transition-colors"
              />
              <Button 
                onClick={handleEdit} 
@@ -749,7 +808,7 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
           </div>
         </Card>
 
-        <Card className="p-6 flex flex-col items-center justify-center min-h-[500px] bg-silver-50">
+        <Card className="p-6 flex flex-col items-center justify-center min-h-[500px] bg-silver-50 dark:bg-zinc-800 transition-colors">
            {resultImage ? (
              <div className="relative group w-full h-full flex flex-col items-center justify-center">
                 <img src={resultImage.url} alt="Edited" className="max-h-[500px] object-contain rounded-lg shadow-lg" />
@@ -760,7 +819,7 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
                 </div>
              </div>
            ) : (
-             <div className="text-gray-300 flex flex-col items-center">
+             <div className="text-gray-300 dark:text-gray-600 flex flex-col items-center">
                <Wand2 size={48} className="mb-2" />
                <p>Result will appear here</p>
              </div>
@@ -776,7 +835,7 @@ const EditablePage = ({ onSave }: { onSave: (img: GeneratedImage) => void }) => 
 };
 
 // 3. PROMPTABLE PAGE
-const PromptablePage = () => {
+const PromptablePage = ({ onError }: { onError: (msg: string) => void }) => {
   const [image, setImage] = useState<File | null>(null);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -788,8 +847,12 @@ const PromptablePage = () => {
     try {
       const text = await GeminiService.analyzeImageForPrompt(image, type);
       setGeneratedPrompt(text);
-    } catch (e) {
-      alert("Analysis failed.");
+    } catch (e: any) {
+      if (e.message?.includes('xhr')) {
+        onError("Analysis interrupted. Network unstable.");
+      } else {
+        onError("Analysis failed. Please try again.");
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -803,13 +866,13 @@ const PromptablePage = () => {
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-black mb-2">Promptable</h1>
-        <p className="text-gray-500">Reverse engineer images into detailed prompts for reproduction or video creation.</p>
+        <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Promptable</h1>
+        <p className="text-gray-500 dark:text-gray-400">Reverse engineer images into detailed prompts for reproduction or video creation.</p>
       </header>
 
       <div className="grid lg:grid-cols-2 gap-8">
         <Card className="p-6 flex flex-col gap-6">
-           <div className="flex-1 min-h-[300px] border-2 border-dashed border-silver-300 rounded-xl bg-silver-100 flex items-center justify-center relative group">
+           <div className="flex-1 min-h-[300px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative group transition-colors">
             {image ? (
                <div className="relative w-full h-full">
                   <img src={URL.createObjectURL(image)} alt="Analysis Source" className="w-full h-full object-contain rounded-lg" />
@@ -818,7 +881,7 @@ const PromptablePage = () => {
                   </button>
                </div>
             ) : (
-              <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 hover:text-gold-500 transition-colors">
+              <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
                 <ImageIcon size={48} />
                 <span className="font-semibold">Drop Image for Analysis</span>
                 <input type="file" accept="image/*" onChange={(e) => e.target.files && setImage(e.target.files[0])} className="hidden" />
@@ -847,7 +910,7 @@ const PromptablePage = () => {
            </div>
         </Card>
 
-        <Card className="p-8 bg-black text-white relative overflow-hidden">
+        <Card className="p-8 bg-black dark:bg-zinc-900 text-white relative overflow-hidden">
            <div className="absolute top-0 right-0 p-32 bg-gold-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
            <h3 className="text-gold-500 font-bold mb-4 flex items-center gap-2">
              <Sparkles size={18} /> Generated Prompt
@@ -889,24 +952,24 @@ const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8 flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-bold text-black mb-2">Collection</h1>
-          <p className="text-gray-500">Your personal gallery of AI-generated masterpieces.</p>
+          <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Collection</h1>
+          <p className="text-gray-500 dark:text-gray-400">Your personal gallery of AI-generated masterpieces.</p>
         </div>
-        <div className="text-sm font-bold text-gold-600">
+        <div className="text-sm font-bold text-gold-600 dark:text-gold-500">
           {collection.length} ITEMS
         </div>
       </header>
 
       {collection.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-silver-200">
-          <Layers size={64} className="text-silver-300 mb-6" />
-          <h3 className="text-xl font-bold text-gray-400">Gallery is Empty</h3>
-          <p className="text-gray-400 mt-2">Generate some images to save them here.</p>
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-silver-200 dark:border-zinc-800 transition-colors">
+          <Layers size={64} className="text-silver-300 dark:text-zinc-700 mb-6" />
+          <h3 className="text-xl font-bold text-gray-400 dark:text-gray-500">Gallery is Empty</h3>
+          <p className="text-gray-400 dark:text-gray-600 mt-2">Generate some images to save them here.</p>
         </div>
       ) : (
         <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
           {collection.map((img) => (
-            <div key={img.id} className="break-inside-avoid bg-white rounded-xl overflow-hidden shadow-lg border border-silver-100 group relative">
+            <div key={img.id} className="break-inside-avoid bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-lg border border-silver-100 dark:border-zinc-800 group relative transition-colors">
               <img src={img.url} alt="Saved" className="w-full h-auto" />
               <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-between">
                  <p className="text-white text-xs line-clamp-3 opacity-80">{img.prompt}</p>

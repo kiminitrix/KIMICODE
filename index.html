@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
@@ -47,6 +48,16 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
       }
+      /* Dark mode scrollbar override */
+      .dark ::-webkit-scrollbar-track {
+        background: #18181b; 
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #3f3f46; 
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #52525b; 
+      }
     </style>
   <script type="importmap">
 {
@@ -60,7 +71,7 @@
 }
 </script>
 </head>
-  <body class="bg-white text-black antialiased">
+  <body class="bg-white text-black antialiased dark:bg-zinc-950 dark:text-white transition-colors duration-300">
     <div id="root"></div>
   </body>
 </html>
