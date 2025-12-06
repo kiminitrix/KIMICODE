@@ -470,9 +470,11 @@ export default function App() {
       
       {/* Mobile Header */}
       <div className="md:hidden bg-white dark:bg-zinc-900 p-4 flex justify-between items-center shadow-md z-20 sticky top-0 transition-colors duration-300">
-        <div className="text-2xl font-black tracking-tighter flex items-center gap-2">
-          <span className="bg-gradient-to-br from-gold-400 to-gold-600 text-transparent bg-clip-text">KIMI</span>
-          <span className="text-black dark:text-white">CODE</span>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold">K</div>
+          <div className="text-xl font-black tracking-tight text-black dark:text-white">
+            KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
+          </div>
         </div>
         <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-400 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
           {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
@@ -482,11 +484,10 @@ export default function App() {
       {/* Sidebar Navigation */}
       <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-zinc-900 border-r border-silver-200 dark:border-zinc-800 h-screen sticky top-0 z-30 transition-colors duration-300">
         <div className="p-8">
-          <div className="text-3xl font-black tracking-tighter flex items-center gap-2 mb-10">
-             <div className="w-10 h-10 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black">K</div>
-             <div className="flex flex-col leading-none">
-               <span className="text-black dark:text-white text-lg">KIMI</span>
-               <span className="text-gold-500 dark:text-gold-400 text-sm">CODE</span>
+          <div className="flex items-center gap-3 mb-10">
+             <div className="w-10 h-10 flex-shrink-0 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold text-xl">K</div>
+             <div className="text-2xl font-black tracking-tight text-black dark:text-white">
+               KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
              </div>
           </div>
           
@@ -594,6 +595,17 @@ const ImaginablePage = ({
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
   const [upscalingId, setUpscalingId] = useState<string | null>(null);
+
+  // Friendly names for Aspect Ratios
+  const aspectRatioLabels: Record<string, string> = {
+    [AspectRatio.SQUARE]: 'Square (1:1)',
+    [AspectRatio.LANDSCAPE]: 'Landscape (16:9)',
+    [AspectRatio.PORTRAIT]: 'Portrait (9:16)',
+    [AspectRatio.STANDARD]: 'Standard (4:3)',
+    [AspectRatio.TALL]: 'Standard Portrait (3:4)',
+    [AspectRatio.LANDSCAPE_3_2]: 'Classic (3:2)',
+    [AspectRatio.PORTRAIT_2_3]: 'Classic Portrait (2:3)'
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -773,7 +785,7 @@ const ImaginablePage = ({
                        className="w-full p-3 bg-silver-100 dark:bg-zinc-800 rounded-lg appearance-none text-sm font-medium focus:ring-2 focus:ring-gold-400 outline-none dark:text-white transition-colors"
                      >
                        {Object.values(AspectRatio).map(r => (
-                         <option key={r} value={r}>{r}</option>
+                         <option key={r} value={r}>{aspectRatioLabels[r] || r}</option>
                        ))}
                      </select>
                      <ChevronDown className="absolute right-3 top-3.5 text-gray-400 pointer-events-none" size={16} />
