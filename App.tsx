@@ -53,7 +53,7 @@ const Modal = ({ isOpen, onClose, children }: any) => {
       <button onClick={onClose} className="absolute top-6 right-6 text-white hover:text-gold-400 transition-colors z-50">
         <XCircle size={40} />
       </button>
-      <div className="max-w-7xl w-full max-h-[90vh] overflow-auto relative">
+      <div className="max-w-7xl w-full max-h-[90vh] overflow-auto relative flex items-center justify-center">
         {children}
       </div>
     </div>
@@ -854,7 +854,7 @@ const ImaginablePage = ({
       {/* Full Screen Modal */}
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
         {previewImage && (
-           <img src={previewImage.url} alt="Full view" className="max-w-full max-h-[85vh] rounded-lg shadow-2xl" />
+           <img src={previewImage.url} alt="Full view" className="max-w-full max-h-[85vh] rounded-lg shadow-2xl mx-auto block" />
         )}
       </Modal>
 
@@ -919,9 +919,10 @@ const EditablePage = ({
         <p className="text-gray-500 dark:text-gray-400">Modify existing images with natural language instructions.</p>
       </header>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-8 items-start">
+        {/* Left Side: Input & Reference */}
         <Card className="p-6 flex flex-col gap-6">
-          <div className="flex-1 min-h-[300px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden group transition-colors">
+          <div className="w-full h-[400px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden group transition-colors">
             {baseImage ? (
               <>
                  <img src={URL.createObjectURL(baseImage)} alt="Original" className="w-full h-full object-contain" />
@@ -959,27 +960,30 @@ const EditablePage = ({
           </div>
         </Card>
 
-        <Card className="p-6 flex flex-col items-center justify-center min-h-[500px] bg-silver-50 dark:bg-zinc-800 transition-colors">
-           {resultImage ? (
-             <div className="relative group w-full h-full flex flex-col items-center justify-center">
-                <img src={resultImage.url} alt="Edited" className="max-h-[500px] object-contain rounded-lg shadow-lg" />
-                <div className="absolute bottom-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => setPreviewImage(resultImage)} className="p-3 bg-black text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Maximize2 size={20} /></button>
-                    <a href={resultImage.url} download="kimicode-edit.png" className="p-3 bg-black text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Download size={20} /></a>
-                    <button onClick={() => onSave(resultImage)} className="p-3 bg-gold-500 text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Save size={20} /></button>
-                </div>
-             </div>
-           ) : (
-             <div className="text-gray-300 dark:text-gray-600 flex flex-col items-center">
-               <Wand2 size={48} className="mb-2" />
-               <p>Result will appear here</p>
-             </div>
-           )}
+        {/* Right Side: Result */}
+        <Card className="p-6 flex flex-col gap-6">
+           <div className="w-full h-[400px] bg-silver-50 dark:bg-zinc-800 border border-silver-200 dark:border-zinc-700 rounded-xl flex items-center justify-center overflow-hidden transition-colors relative">
+             {resultImage ? (
+               <div className="relative group w-full h-full flex flex-col items-center justify-center">
+                  <img src={resultImage.url} alt="Edited" className="w-full h-full object-contain" />
+                  <div className="absolute bottom-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <button onClick={() => setPreviewImage(resultImage)} className="p-3 bg-black text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Maximize2 size={20} /></button>
+                      <a href={resultImage.url} download="kimicode-edit.png" className="p-3 bg-black text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Download size={20} /></a>
+                      <button onClick={() => onSave(resultImage)} className="p-3 bg-gold-500 text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Save size={20} /></button>
+                  </div>
+               </div>
+             ) : (
+               <div className="text-gray-300 dark:text-gray-600 flex flex-col items-center">
+                 <Wand2 size={48} className="mb-2" />
+                 <p>Result will appear here</p>
+               </div>
+             )}
+           </div>
         </Card>
       </div>
 
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
-        {previewImage && <img src={previewImage.url} alt="Full" className="max-w-full max-h-[85vh] rounded-lg" />}
+        {previewImage && <img src={previewImage.url} alt="Full" className="max-w-full max-h-[85vh] rounded-lg mx-auto block" />}
       </Modal>
     </div>
   );
@@ -1146,7 +1150,7 @@ const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
       )}
 
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
-        {previewImage && <img src={previewImage.url} alt="Full" className="max-w-full max-h-[85vh] rounded-lg" />}
+        {previewImage && <img src={previewImage.url} alt="Full" className="max-w-full max-h-[85vh] rounded-lg mx-auto block" />}
       </Modal>
     </div>
   );
