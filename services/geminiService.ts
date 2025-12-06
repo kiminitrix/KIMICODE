@@ -175,6 +175,10 @@ export const upscaleImage = async (
   aspectRatio: string = '1:1'
 ): Promise<string> => {
   try {
+    // Determine MIME type from data URL if possible, otherwise default
+    const mimeMatch = base64Url.match(/data:([^;]+);/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+    
     // Extract base64 from data URL
     const base64 = base64Url.includes(',') ? base64Url.split(',')[1] : base64Url;
     
@@ -193,7 +197,7 @@ export const upscaleImage = async (
           {
             inlineData: {
               data: base64,
-              mimeType: 'image/png', // Assumption for base64 data
+              mimeType: mimeType, 
             }
           },
           {

@@ -326,6 +326,7 @@ export default function App() {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(AppRoute.IMAGINABLE);
   const [collection, setCollection] = useState<GeneratedImage[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
+  const notificationTimeoutRef = useRef<number | null>(null);
 
   // --- PERSISTENT STATE ---
   // Imaginable
@@ -396,8 +397,15 @@ export default function App() {
   };
 
   const showNotification = (msg: string) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
     setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
+    // In browser, setTimeout returns a number
+    notificationTimeoutRef.current = window.setTimeout(() => {
+      setNotification(null);
+      notificationTimeoutRef.current = null;
+    }, 3000);
   };
 
   // Render Page Switcher
@@ -607,11 +615,8 @@ const ImaginablePage = ({
   const handleGenerate = async () => {
     if (!prompt) return;
     setIsGenerating(true);
-    // Note: We don't clear generatedResults here so previous results stay while new ones load, 
-    // or we could clear them if that's the desired UX. For "sticking inputs", let's keep previous results visible or clear?
-    // Let's clear to show fresh results for this batch, or append? Usually clear for a new 'Generate' action.
-    updateState({ generatedResults: [] });
-
+    // Don't clear previous results - prepend new ones
+    
     try {
       const batchPromises = [];
       for (let i = 0; i < count; i++) {
@@ -634,7 +639,8 @@ const ImaginablePage = ({
         aspectRatio
       }));
 
-      updateState({ generatedResults: newImages });
+      // Prepend new images to existing list to preserve session history
+      updateState({ generatedResults: [...newImages, ...generatedResults] });
     } catch (error: any) {
       console.error("Generation error:", error);
       if (error.message?.includes('400') || error.message?.includes('500') || error.message?.includes('xhr')) {
@@ -648,6 +654,7 @@ const ImaginablePage = ({
   };
 
   const handleSaveEdited = (newImg: GeneratedImage) => {
+    // Add edited image to the top of the list
     updateState({ generatedResults: [newImg, ...generatedResults] });
     onError("Edits applied successfully");
   };
@@ -799,10 +806,10 @@ const ImaginablePage = ({
              </div>
            )}
 
-           {isGenerating && generatedResults.length === 0 && (
-             <div className="h-full min-h-[400px] flex flex-col items-center justify-center">
-               <Loader2 size={48} className="animate-spin text-gold-500 mb-4" />
-               <p className="text-gray-400 dark:text-gray-500 animate-pulse">Consulting the AI muses...</p>
+           {isGenerating && (
+             <div className="mb-6 flex flex-col items-center justify-center p-8 bg-silver-50 dark:bg-zinc-900/50 rounded-xl border border-silver-200 dark:border-zinc-800">
+               <Loader2 size={32} className="animate-spin text-gold-500 mb-2" />
+               <p className="text-gray-400 dark:text-gray-500 animate-pulse text-sm">Consulting the AI muses...</p>
              </div>
            )}
 
@@ -1013,7 +1020,7 @@ const PromptablePage = ({
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedPrompt);
-    alert("Copied to clipboard!");
+    onError("Copied to clipboard!");
   };
 
   return (
