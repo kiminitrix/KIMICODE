@@ -257,9 +257,20 @@ export const analyzeImageForPrompt = async (
   }
 };
 
-export const extractTextFromImage = async (file: File): Promise<string> => {
+export const extractTextFromFile = async (file: File): Promise<string> => {
   try {
     const base64 = await fileToBase64(file);
+    
+    let prompt = "Extract all visible text from this content. Return ONLY the extracted text content.";
+    
+    if (file.type.startsWith('audio')) {
+      prompt = "Transcribe the following audio file. Return ONLY the transcription text.";
+    } else if (file.type.startsWith('video')) {
+      prompt = "Transcribe the audio from this video and describe any prominent on-screen text. Return ONLY the text/transcription.";
+    } else if (file.type === 'application/pdf') {
+      prompt = "Read this PDF document and extract all text. Return ONLY the text content.";
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
@@ -271,7 +282,7 @@ export const extractTextFromImage = async (file: File): Promise<string> => {
             }
           },
           { 
-            text: "Extract all visible text from this image. Return ONLY the extracted text content. Do not add any conversational phrases or markdown formatting unless it represents the text structure." 
+            text: prompt 
           }
         ]
       }

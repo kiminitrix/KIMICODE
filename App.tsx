@@ -4,12 +4,12 @@ import {
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
   Trash2, Loader2, Sparkles, Layers, Video, Film,
   Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle,
-  ChevronsUp, FileText, Copy
+  ChevronsUp, FileText, Copy, Music, File as FileIcon, FileType
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio,
   ImaginableState, EditableState, PromptableState,
-  Image2TextState, TextExtractionResult
+  Any2TextState, TextExtractionResult
 } from './types';
 import * as GeminiService from './services/geminiService';
 
@@ -353,8 +353,8 @@ export default function App() {
     generatedPrompt: ''
   });
 
-  // Image2Text
-  const [image2TextState, setImage2TextState] = useState<Image2TextState>({
+  // Any2Text
+  const [any2TextState, setAny2TextState] = useState<Any2TextState>({
     results: []
   });
 
@@ -443,11 +443,11 @@ export default function App() {
             onError={showNotification} 
           />
         );
-      case AppRoute.IMAGE2TEXT:
+      case AppRoute.ANY2TEXT:
         return (
-          <Image2TextPage 
-            state={image2TextState}
-            setState={setImage2TextState}
+          <Any2TextPage 
+            state={any2TextState}
+            setState={setAny2TextState}
             onError={showNotification} 
           />
         );
@@ -496,7 +496,7 @@ export default function App() {
               { id: AppRoute.IMAGINABLE, icon: Sparkles, label: 'Imaginable' },
               { id: AppRoute.EDITABLE, icon: Edit, label: 'Editable' },
               { id: AppRoute.PROMPTABLE, icon: Wand2, label: 'Promptable' },
-              { id: AppRoute.IMAGE2TEXT, icon: FileText, label: 'Image2Text' },
+              { id: AppRoute.ANY2TEXT, icon: FileType, label: 'Any2Text' },
               { id: AppRoute.COLLECTION, icon: Layers, label: 'Collection' },
             ].map((item) => (
               <button
@@ -544,7 +544,7 @@ export default function App() {
               { id: AppRoute.IMAGINABLE, label: 'Imagine' },
               { id: AppRoute.EDITABLE, label: 'Edit' },
               { id: AppRoute.PROMPTABLE, label: 'Prompt' },
-              { id: AppRoute.IMAGE2TEXT, label: 'Img2Txt' },
+              { id: AppRoute.ANY2TEXT, label: 'Any2Txt' },
               { id: AppRoute.COLLECTION, label: 'Gallery' },
             ].map((item) => (
               <button
@@ -1136,12 +1136,12 @@ const PromptablePage = ({
   );
 };
 
-// 4. IMAGE 2 TEXT PAGE
-const Image2TextPage = ({ 
+// 4. ANY 2 TEXT PAGE
+const Any2TextPage = ({ 
   state, setState, onError 
 }: { 
-  state: Image2TextState, 
-  setState: React.Dispatch<React.SetStateAction<Image2TextState>>, 
+  state: Any2TextState, 
+  setState: React.Dispatch<React.SetStateAction<Any2TextState>>, 
   onError: (msg: string) => void 
 }) => {
   const { results } = state;
@@ -1170,17 +1170,17 @@ const Image2TextPage = ({
     }));
 
     try {
-      const text = await GeminiService.extractTextFromImage(target.file);
+      const text = await GeminiService.extractTextFromFile(target.file);
       setState(prev => ({
         results: prev.results.map(r => r.id === id ? { ...r, extractedText: text, isLoading: false } : r)
       }));
-      onError("Text extracted successfully!");
+      onError("Content processed successfully!");
     } catch (e) {
       console.error(e);
       setState(prev => ({
         results: prev.results.map(r => r.id === id ? { ...r, isLoading: false } : r)
       }));
-      onError("Failed to extract text.");
+      onError("Failed to process file.");
     }
   };
 
@@ -1198,26 +1198,56 @@ const Image2TextPage = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${filename.split('.')[0]}_extracted.txt`;
+    a.download = `${filename.split('.')[0]}_transcript.txt`;
     a.click();
     URL.revokeObjectURL(url);
     onError("File downloaded!");
   };
 
+  const renderPreview = (item: TextExtractionResult) => {
+    const type = item.file.type;
+    if (type.startsWith('image/')) {
+      return <img src={item.previewUrl} alt="source" className="w-full h-full object-contain" />;
+    }
+    if (type.startsWith('video/')) {
+      return <video src={item.previewUrl} controls className="w-full h-full object-contain" />;
+    }
+    if (type.startsWith('audio/')) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-4 text-gold-500">
+          <Music size={64} className="animate-pulse" />
+          <audio src={item.previewUrl} controls className="w-64" />
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 text-gray-500">
+         <FileIcon size={64} />
+         <span className="font-semibold text-sm">{item.file.name}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Image2Text</h1>
-        <p className="text-gray-500 dark:text-gray-400">Extract text from images using advanced optical character recognition (OCR).</p>
+        <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Any2Text</h1>
+        <p className="text-gray-500 dark:text-gray-400">Extract text and transcribe audio/video using advanced multimodal AI.</p>
       </header>
 
       {/* Upload Area */}
       <Card className="p-8 border-2 border-dashed border-silver-300 dark:border-zinc-700 bg-silver-50 dark:bg-zinc-800/50 flex flex-col items-center justify-center text-center hover:bg-silver-100 dark:hover:bg-zinc-800 transition-colors">
         <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center">
-           <FileText size={48} className="text-gray-400 dark:text-gray-500 mb-4" />
-           <span className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">Click to Upload Images</span>
-           <span className="text-sm text-gray-500">Supports JPG, PNG, WEBP (Multiple files allowed)</span>
-           <input type="file" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
+           <FileType size={48} className="text-gray-400 dark:text-gray-500 mb-4" />
+           <span className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">Click to Upload</span>
+           <span className="text-sm text-gray-500">Images, Videos, Audio, PDF (Multiple files allowed)</span>
+           <input 
+              type="file" 
+              multiple 
+              accept="image/*,video/*,audio/*,application/pdf,text/plain" 
+              onChange={handleFileChange} 
+              className="hidden" 
+           />
         </label>
       </Card>
 
@@ -1226,13 +1256,13 @@ const Image2TextPage = ({
          {results.map((item) => (
            <Card key={item.id} className="p-6 overflow-hidden">
              <div className="grid lg:grid-cols-2 gap-8 items-start">
-               {/* Left: Image Viewer & Action */}
+               {/* Left: Media Viewer & Action */}
                <div className="flex flex-col gap-6">
                  <div className="relative rounded-xl overflow-hidden border border-silver-200 dark:border-zinc-700 bg-silver-100 dark:bg-zinc-800 h-[400px] flex items-center justify-center group">
-                    <img src={item.previewUrl} alt="source" className="w-full h-full object-contain" />
+                    {renderPreview(item)}
                     <button 
                       onClick={() => handleRemove(item.id)}
-                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -1244,7 +1274,7 @@ const Image2TextPage = ({
                    className="w-full"
                    icon={item.isLoading ? Loader2 : Sparkles}
                  >
-                   {item.isLoading ? 'Extracting...' : item.extractedText ? 'Re-Extract Text' : 'Extract Text'}
+                   {item.isLoading ? 'Processing...' : item.extractedText ? 'Re-Process' : 'Extract / Transcribe'}
                  </Button>
                </div>
 
@@ -1264,7 +1294,7 @@ const Image2TextPage = ({
                         ) : (
                            <FileText size={48} className="mb-2 opacity-50" />
                         )}
-                        <p>{item.isLoading ? 'Analyzing text...' : 'Extracted text will appear here'}</p>
+                        <p>{item.isLoading ? 'Analyzing content...' : 'Extracted text / transcript will appear here'}</p>
                       </div>
                     )}
                  </div>

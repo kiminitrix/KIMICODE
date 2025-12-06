@@ -11,7 +11,7 @@ export enum AppRoute {
   IMAGINABLE = 'Imaginable',
   EDITABLE = 'Editable',
   PROMPTABLE = 'Promptable',
-  IMAGE2TEXT = 'Image2Text',
+  ANY2TEXT = 'Any2Text',
   COLLECTION = 'Collection'
 }
 
@@ -68,6 +68,6 @@ export interface TextExtractionResult {
   isLoading: boolean;
 }
 
-export interface Image2TextState {
+export interface Any2TextState {
   results: TextExtractionResult[];
 }
