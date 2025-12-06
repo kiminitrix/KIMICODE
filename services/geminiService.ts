@@ -256,3 +256,30 @@ export const analyzeImageForPrompt = async (
     throw error;
   }
 };
+
+export const extractTextFromImage = async (file: File): Promise<string> => {
+  try {
+    const base64 = await fileToBase64(file);
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: base64,
+              mimeType: file.type,
+            }
+          },
+          { 
+            text: "Extract all visible text from this image. Return ONLY the extracted text content. Do not add any conversational phrases or markdown formatting unless it represents the text structure." 
+          }
+        ]
+      }
+    });
+    
+    return response.text || "No text detected.";
+  } catch (error) {
+    console.error("Error extracting text:", error);
+    throw error;
+  }
+};

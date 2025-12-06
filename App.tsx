@@ -4,11 +4,12 @@ import {
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
   Trash2, Loader2, Sparkles, Layers, Video, Film,
   Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle,
-  ChevronsUp
+  ChevronsUp, FileText, Copy
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio,
-  ImaginableState, EditableState, PromptableState
+  ImaginableState, EditableState, PromptableState,
+  Image2TextState, TextExtractionResult
 } from './types';
 import * as GeminiService from './services/geminiService';
 
@@ -352,6 +353,11 @@ export default function App() {
     generatedPrompt: ''
   });
 
+  // Image2Text
+  const [image2TextState, setImage2TextState] = useState<Image2TextState>({
+    results: []
+  });
+
   // Initialize theme from storage to avoid flicker and race conditions
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
@@ -437,6 +443,14 @@ export default function App() {
             onError={showNotification} 
           />
         );
+      case AppRoute.IMAGE2TEXT:
+        return (
+          <Image2TextPage 
+            state={image2TextState}
+            setState={setImage2TextState}
+            onError={showNotification} 
+          />
+        );
       case AppRoute.COLLECTION:
         return <CollectionPage collection={collection} />;
       default:
@@ -481,6 +495,7 @@ export default function App() {
               { id: AppRoute.IMAGINABLE, icon: Sparkles, label: 'Imaginable' },
               { id: AppRoute.EDITABLE, icon: Edit, label: 'Editable' },
               { id: AppRoute.PROMPTABLE, icon: Wand2, label: 'Promptable' },
+              { id: AppRoute.IMAGE2TEXT, icon: FileText, label: 'Image2Text' },
               { id: AppRoute.COLLECTION, icon: Layers, label: 'Collection' },
             ].map((item) => (
               <button
@@ -528,6 +543,7 @@ export default function App() {
               { id: AppRoute.IMAGINABLE, label: 'Imagine' },
               { id: AppRoute.EDITABLE, label: 'Edit' },
               { id: AppRoute.PROMPTABLE, label: 'Prompt' },
+              { id: AppRoute.IMAGE2TEXT, label: 'Img2Txt' },
               { id: AppRoute.COLLECTION, label: 'Gallery' },
             ].map((item) => (
               <button
@@ -1108,7 +1124,170 @@ const PromptablePage = ({
   );
 };
 
-// 4. COLLECTION PAGE
+// 4. IMAGE 2 TEXT PAGE
+const Image2TextPage = ({ 
+  state, setState, onError 
+}: { 
+  state: Image2TextState, 
+  setState: React.Dispatch<React.SetStateAction<Image2TextState>>, 
+  onError: (msg: string) => void 
+}) => {
+  const { results } = state;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles: File[] = Array.from(e.target.files);
+      const newEntries: TextExtractionResult[] = newFiles.map(file => ({
+        id: Date.now() + Math.random().toString(),
+        file: file,
+        previewUrl: URL.createObjectURL(file),
+        extractedText: '',
+        isLoading: false
+      }));
+      setState(prev => ({ results: [...newEntries, ...prev.results] }));
+    }
+  };
+
+  const handleExtract = async (id: string) => {
+    const target = results.find(r => r.id === id);
+    if (!target) return;
+
+    // Set loading
+    setState(prev => ({
+      results: prev.results.map(r => r.id === id ? { ...r, isLoading: true } : r)
+    }));
+
+    try {
+      const text = await GeminiService.extractTextFromImage(target.file);
+      setState(prev => ({
+        results: prev.results.map(r => r.id === id ? { ...r, extractedText: text, isLoading: false } : r)
+      }));
+      onError("Text extracted successfully!");
+    } catch (e) {
+      console.error(e);
+      setState(prev => ({
+        results: prev.results.map(r => r.id === id ? { ...r, isLoading: false } : r)
+      }));
+      onError("Failed to extract text.");
+    }
+  };
+
+  const handleRemove = (id: string) => {
+    setState(prev => ({ results: prev.results.filter(r => r.id !== id) }));
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    onError("Copied to clipboard!");
+  };
+
+  const handleDownload = (text: string, filename: string) => {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename.split('.')[0]}_extracted.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onError("File downloaded!");
+  };
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold text-black dark:text-white mb-2">Image2Text</h1>
+        <p className="text-gray-500 dark:text-gray-400">Extract text from images using advanced optical character recognition (OCR).</p>
+      </header>
+
+      {/* Upload Area */}
+      <Card className="p-8 border-2 border-dashed border-silver-300 dark:border-zinc-700 bg-silver-50 dark:bg-zinc-800/50 flex flex-col items-center justify-center text-center hover:bg-silver-100 dark:hover:bg-zinc-800 transition-colors">
+        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center">
+           <FileText size={48} className="text-gray-400 dark:text-gray-500 mb-4" />
+           <span className="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">Click to Upload Images</span>
+           <span className="text-sm text-gray-500">Supports JPG, PNG, WEBP (Multiple files allowed)</span>
+           <input type="file" multiple accept="image/*" onChange={handleFileChange} className="hidden" />
+        </label>
+      </Card>
+
+      {/* Results List */}
+      <div className="space-y-6">
+         {results.map((item) => (
+           <Card key={item.id} className="p-6 overflow-hidden">
+             <div className="grid lg:grid-cols-2 gap-8 items-start">
+               {/* Left: Image Viewer & Action */}
+               <div className="flex flex-col gap-6">
+                 <div className="relative rounded-xl overflow-hidden border border-silver-200 dark:border-zinc-700 bg-silver-100 dark:bg-zinc-800 h-[400px] flex items-center justify-center group">
+                    <img src={item.previewUrl} alt="source" className="w-full h-full object-contain" />
+                    <button 
+                      onClick={() => handleRemove(item.id)}
+                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                 </div>
+                 <Button 
+                   onClick={() => handleExtract(item.id)}
+                   disabled={item.isLoading}
+                   variant="gold"
+                   className="w-full"
+                   icon={item.isLoading ? Loader2 : Sparkles}
+                 >
+                   {item.isLoading ? 'Extracting...' : item.extractedText ? 'Re-Extract Text' : 'Extract Text'}
+                 </Button>
+               </div>
+
+               {/* Right: Text Viewer & Actions */}
+               <div className="flex flex-col gap-6">
+                 <div className="h-[400px] bg-silver-50 dark:bg-zinc-950 rounded-xl border border-silver-200 dark:border-zinc-800 p-4 relative flex flex-col">
+                    {item.extractedText ? (
+                      <textarea 
+                        readOnly
+                        value={item.extractedText}
+                        className="w-full h-full bg-transparent border-none outline-none resize-none font-mono text-sm text-gray-800 dark:text-gray-300 custom-scrollbar"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
+                        {item.isLoading ? (
+                           <Loader2 size={32} className="animate-spin text-gold-500 mb-2" />
+                        ) : (
+                           <FileText size={48} className="mb-2 opacity-50" />
+                        )}
+                        <p>{item.isLoading ? 'Analyzing text...' : 'Extracted text will appear here'}</p>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Actions */}
+                 <div className="flex justify-end gap-3">
+                    <Button 
+                      onClick={() => handleCopy(item.extractedText)}
+                      disabled={!item.extractedText}
+                      variant="secondary"
+                      className="flex-1"
+                      icon={Copy}
+                    >
+                      Copy
+                    </Button>
+                    <Button 
+                      onClick={() => handleDownload(item.extractedText, item.file.name)}
+                      disabled={!item.extractedText}
+                      variant="primary"
+                      className="flex-1"
+                      icon={Download}
+                    >
+                      Download .txt
+                    </Button>
+                 </div>
+               </div>
+             </div>
+           </Card>
+         ))}
+      </div>
+    </div>
+  );
+};
+
+// 5. COLLECTION PAGE
 const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
 

@@ -11,6 +11,7 @@ export enum AppRoute {
   IMAGINABLE = 'Imaginable',
   EDITABLE = 'Editable',
   PROMPTABLE = 'Promptable',
+  IMAGE2TEXT = 'Image2Text',
   COLLECTION = 'Collection'
 }
 
@@ -57,4 +58,16 @@ export interface EditableState {
 export interface PromptableState {
   image: File | null;
   generatedPrompt: string;
+}
+
+export interface TextExtractionResult {
+  id: string;
+  file: File;
+  previewUrl: string;
+  extractedText: string;
+  isLoading: boolean;
+}
+
+export interface Image2TextState {
+  results: TextExtractionResult[];
 }
