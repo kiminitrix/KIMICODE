@@ -6,7 +6,7 @@ import {
   Trash2, Loader2, Sparkles, Layers, Video, Film,
   Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle,
   ChevronsUp, FileText, Copy, Music, File as FileIcon, FileType,
-  Cloud, CloudLightning
+  Cloud, CloudLightning, LogOut
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio,
@@ -378,6 +378,7 @@ export default function App() {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(AppRoute.IMAGINABLE);
   const [collection, setCollection] = useState<GeneratedImage[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const notificationTimeoutRef = useRef<number | null>(null);
 
   // --- PERSISTENT STATE ---
@@ -483,6 +484,11 @@ export default function App() {
     }, 3000);
   };
 
+  const handleMobileNavClick = (route: AppRoute) => {
+    setActiveRoute(route);
+    setIsMobileMenuOpen(false);
+  };
+
   // Render Page Switcher
   const renderContent = () => {
     switch (activeRoute) {
@@ -534,15 +540,84 @@ export default function App() {
     }
   };
 
+  const NavContent = ({ mobile = false }: { mobile?: boolean }) => (
+    <>
+      <div className="p-8">
+        <div className="flex items-center gap-3 mb-10">
+            <div className="w-10 h-10 flex-shrink-0 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold text-xl">K</div>
+            <div className="text-2xl font-black tracking-tight text-black dark:text-white">
+              KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
+            </div>
+            {mobile && (
+              <button onClick={() => setIsMobileMenuOpen(false)} className="ml-auto text-gray-500">
+                <X size={24} />
+              </button>
+            )}
+        </div>
+        
+        <nav className="space-y-2">
+          {[
+            { id: AppRoute.IMAGINABLE, icon: Sparkles, label: 'Imaginable' },
+            { id: AppRoute.EDITABLE, icon: Edit, label: 'Editable' },
+            { id: AppRoute.PROMPTABLE, icon: Wand2, label: 'Promptable' },
+            { id: AppRoute.ANY2TEXT, icon: FileType, label: 'Any2Text' },
+            { id: AppRoute.COLLECTION, icon: Layers, label: 'Collection' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => mobile ? handleMobileNavClick(item.id) : setActiveRoute(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                activeRoute === item.id
+                  ? 'bg-black text-white shadow-lg shadow-black/20 dark:bg-gold-500 dark:text-black dark:shadow-gold-500/20'
+                  : 'text-gray-500 hover:bg-silver-100 hover:text-black dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-white'
+              }`}
+            >
+              <item.icon size={20} />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      <div className="mt-auto p-8 border-t border-silver-100 dark:border-zinc-800 space-y-4">
+        <button 
+          onClick={toggleTheme}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-silver-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-silver-200 dark:hover:bg-zinc-700 transition-colors"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+          </span>
+        </button>
+
+        <div className="bg-gradient-to-br from-silver-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-4 rounded-xl border border-silver-200 dark:border-zinc-700">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Status</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            <span className="text-sm font-medium text-black dark:text-white">Systems Operational</span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-silver-100 dark:bg-zinc-950 flex flex-col md:flex-row font-sans text-gray-800 dark:text-gray-200 transition-colors duration-300">
       
       {/* Mobile Header */}
       <div className="md:hidden bg-white dark:bg-zinc-900 p-4 flex justify-between items-center shadow-md z-20 sticky top-0 transition-colors duration-300">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold">K</div>
-          <div className="text-xl font-black tracking-tight text-black dark:text-white">
-            KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="text-black dark:text-white hover:text-gold-500 dark:hover:text-gold-400 transition-colors"
+          >
+            <Menu size={28} />
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold">K</div>
+            <div className="text-xl font-black tracking-tight text-black dark:text-white">
+              KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
+            </div>
           </div>
         </div>
         <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-400 hover:text-gold-500 dark:hover:text-gold-400 transition-colors">
@@ -550,86 +625,23 @@ export default function App() {
         </button>
       </div>
 
-      {/* Sidebar Navigation */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-zinc-900 border-r border-silver-200 dark:border-zinc-800 h-screen sticky top-0 z-30 transition-colors duration-300">
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-10">
-             <div className="w-10 h-10 flex-shrink-0 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold text-xl">K</div>
-             <div className="text-2xl font-black tracking-tight text-black dark:text-white">
-               KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
-             </div>
-          </div>
-          
-          <nav className="space-y-2">
-            {[
-              { id: AppRoute.IMAGINABLE, icon: Sparkles, label: 'Imaginable' },
-              { id: AppRoute.EDITABLE, icon: Edit, label: 'Editable' },
-              { id: AppRoute.PROMPTABLE, icon: Wand2, label: 'Promptable' },
-              { id: AppRoute.ANY2TEXT, icon: FileType, label: 'Any2Text' },
-              { id: AppRoute.COLLECTION, icon: Layers, label: 'Collection' },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveRoute(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                  activeRoute === item.id
-                    ? 'bg-black text-white shadow-lg shadow-black/20 dark:bg-gold-500 dark:text-black dark:shadow-gold-500/20'
-                    : 'text-gray-500 hover:bg-silver-100 hover:text-black dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-white'
-                }`}
-              >
-                <item.icon size={20} />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="mt-auto p-8 border-t border-silver-100 dark:border-zinc-800 space-y-4">
-          <button 
-            onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-silver-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-silver-200 dark:hover:bg-zinc-700 transition-colors"
-          >
-            <span className="flex items-center gap-2 font-medium">
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-            </span>
-          </button>
-
-          <div className="bg-gradient-to-br from-silver-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-4 rounded-xl border border-silver-200 dark:border-zinc-700">
-            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Status</p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-sm font-medium text-black dark:text-white">Systems Operational</span>
-            </div>
-          </div>
-        </div>
+        <NavContent />
       </aside>
+
+      {/* Mobile Sidebar / Drawer */}
+      <div className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+        {/* Drawer Panel */}
+        <div className={`absolute top-0 left-0 h-full w-80 bg-white dark:bg-zinc-900 shadow-2xl flex flex-col transform transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+           <NavContent mobile={true} />
+        </div>
+      </div>
 
       {/* Main Content Area */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto max-h-screen scroll-smooth">
-         {/* Mobile Nav Tabs */}
-         <div className="md:hidden flex overflow-x-auto gap-2 mb-6 pb-2 scrollbar-hide">
-            {[
-              { id: AppRoute.IMAGINABLE, label: 'Imagine' },
-              { id: AppRoute.EDITABLE, label: 'Edit' },
-              { id: AppRoute.PROMPTABLE, label: 'Prompt' },
-              { id: AppRoute.ANY2TEXT, label: 'Any2Txt' },
-              { id: AppRoute.COLLECTION, label: 'Gallery' },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveRoute(item.id)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold ${
-                  activeRoute === item.id
-                    ? 'bg-black text-white dark:bg-gold-500 dark:text-black'
-                    : 'bg-white text-gray-500 border border-silver-200 dark:bg-zinc-800 dark:text-gray-400 dark:border-zinc-700'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-         </div>
-
         <div className="max-w-7xl mx-auto">
           {renderContent()}
         </div>
@@ -637,7 +649,7 @@ export default function App() {
 
       {/* Notification Toast */}
       {notification && (
-        <div className="fixed bottom-6 right-6 bg-zinc-900/95 dark:bg-white/95 backdrop-blur text-white dark:text-zinc-900 px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-3 border border-white/10 dark:border-black/5 transform transition-all duration-300">
+        <div className="fixed bottom-6 right-6 bg-zinc-900/95 dark:bg-white/95 backdrop-blur text-white dark:text-zinc-900 px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-3 border border-white/10 dark:border-black/5 transform transition-all duration-300 animate-in slide-in-from-bottom-5">
           <Sparkles size={16} className="text-gold-500" />
           <span className="font-medium text-sm">{notification}</span>
         </div>
