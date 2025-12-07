@@ -1,10 +1,12 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Menu, X, Image as ImageIcon, Wand2, Edit, PlaySquare, 
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
   Trash2, Loader2, Sparkles, Layers, Video, Film,
   Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle,
-  ChevronsUp, FileText, Copy, Music, File as FileIcon, FileType
+  ChevronsUp, FileText, Copy, Music, File as FileIcon, FileType,
+  Cloud, CloudLightning
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio,
@@ -12,6 +14,7 @@ import {
   Any2TextState, TextExtractionResult
 } from './types';
 import * as GeminiService from './services/geminiService';
+import * as CloudStorageService from './services/cloudStorageService';
 
 // --- UI Components ---
 
@@ -56,6 +59,54 @@ const Modal = ({ isOpen, onClose, children }: any) => {
       </button>
       <div className="max-w-7xl w-full max-h-[90vh] overflow-auto relative flex items-center justify-center">
         {children}
+      </div>
+    </div>
+  );
+};
+
+const ConfirmDialog = ({ 
+  isOpen, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  confirmText = "Confirm", 
+  cancelText = "Cancel", 
+  isDestructive = false 
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  isDestructive?: boolean;
+}) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-silver-200 dark:border-zinc-800 transform scale-100 transition-all">
+        <h3 className="text-xl font-bold text-black dark:text-white mb-2">{title}</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm leading-relaxed">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <button 
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg font-medium text-sm text-gray-600 dark:text-gray-300 hover:bg-silver-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            {cancelText}
+          </button>
+          <button 
+            onClick={onConfirm}
+            className={`px-4 py-2 rounded-lg font-medium text-sm text-white shadow-lg transition-colors ${
+              isDestructive 
+                ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' 
+                : 'bg-gold-500 hover:bg-gold-600 shadow-gold-500/30'
+            }`}
+          >
+            {confirmText}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -394,12 +445,30 @@ export default function App() {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  // Save collection handler
-  const addToCollection = (img: GeneratedImage) => {
-    const updated = [img, ...collection];
-    setCollection(updated);
-    localStorage.setItem('kimicode_collection', JSON.stringify(updated));
-    showNotification("Saved to Collection");
+  // Save collection handler with Cloud Storage
+  const addToCollection = async (img: GeneratedImage) => {
+    // Notify user upload is starting
+    showNotification("Saving to Cloud...");
+    
+    try {
+      // 1. Upload to Cloud
+      const syncedImage = await CloudStorageService.uploadImageToCloud(img);
+      
+      // 2. Save result to collection (with synced status)
+      const updated = [syncedImage, ...collection];
+      setCollection(updated);
+      localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+      
+      showNotification("Saved to Collection & Cloud");
+    } catch (e) {
+      console.error("Save failed:", e);
+      showNotification("Cloud upload failed. Saved locally.");
+      
+      // Fallback: Save locally even if cloud fails
+      const updated = [img, ...collection];
+      setCollection(updated);
+      localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+    }
   };
 
   const showNotification = (msg: string) => {
@@ -585,7 +654,7 @@ const ImaginablePage = ({
 }: { 
   state: ImaginableState, 
   setState: React.Dispatch<React.SetStateAction<ImaginableState>>, 
-  onSave: (img: GeneratedImage) => void, 
+  onSave: (img: GeneratedImage) => Promise<void>, 
   onError: (msg: string) => void 
 }) => {
   const { prompt, model, aspectRatio, count, refImages, generatedResults } = state;
@@ -595,6 +664,14 @@ const ImaginablePage = ({
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
   const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
   const [upscalingId, setUpscalingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'save' | 'delete';
+    image: GeneratedImage | null;
+  }>({ isOpen: false, type: 'save', image: null });
 
   // Friendly names for Aspect Ratios
   const aspectRatioLabels: Record<string, string> = {
@@ -705,6 +782,36 @@ const ImaginablePage = ({
       onError("Failed to upscale image. Please try again.");
     } finally {
       setUpscalingId(null);
+    }
+  };
+
+  // Trigger Confirmation for Save
+  const handleSaveClick = (img: GeneratedImage) => {
+    setConfirmModal({ isOpen: true, type: 'save', image: img });
+  };
+
+  // Trigger Confirmation for Delete
+  const handleDeleteClick = (img: GeneratedImage) => {
+    setConfirmModal({ isOpen: true, type: 'delete', image: img });
+  };
+
+  // Execute Action after Confirmation
+  const executeConfirmAction = async () => {
+    const { type, image } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Close modal first
+
+    if (!image) return;
+
+    if (type === 'save') {
+      setSavingId(image.id);
+      await onSave(image);
+      setSavingId(null);
+    } else if (type === 'delete') {
+      // Remove from list
+      updateState({ 
+        generatedResults: generatedResults.filter(r => r.id !== image.id) 
+      });
+      onError("Image deleted.");
     }
   };
 
@@ -848,6 +955,13 @@ const ImaginablePage = ({
                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
                     <div className="flex gap-2 justify-end">
                        <button 
+                         onClick={() => handleDeleteClick(img)} 
+                         className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-red-500 transition-all"
+                         title="Delete Image"
+                       >
+                         <Trash2 size={20} />
+                       </button>
+                       <button 
                          onClick={() => handleUpscale(img)}
                          disabled={upscalingId === img.id}
                          className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-all"
@@ -868,8 +982,13 @@ const ImaginablePage = ({
                        <a href={img.url} download={`kimicode-${img.id}.png`} className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-all">
                          <Download size={20} />
                        </a>
-                       <button onClick={() => onSave(img)} className="p-2 bg-gold-500 rounded-full text-white hover:bg-gold-400 transition-all shadow-lg shadow-gold-500/50">
-                         <Save size={20} />
+                       <button 
+                        onClick={() => handleSaveClick(img)} 
+                        disabled={savingId === img.id}
+                        className="p-2 bg-gold-500 rounded-full text-white hover:bg-gold-400 transition-all shadow-lg shadow-gold-500/50"
+                        title="Save to Collection & Cloud"
+                       >
+                         {savingId === img.id ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
                        </button>
                     </div>
                  </div>
@@ -893,6 +1012,21 @@ const ImaginablePage = ({
         onClose={() => setEditingImage(null)} 
         onSave={handleSaveEdited}
       />
+
+      {/* Confirmation Modal */}
+      <ConfirmDialog 
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.type === 'save' ? "Save to Cloud?" : "Delete Image?"}
+        message={
+          confirmModal.type === 'save' 
+          ? "This will sync the image to your cloud storage and collection. Continue?" 
+          : "Are you sure you want to delete this image? This action cannot be undone."
+        }
+        confirmText={confirmModal.type === 'save' ? "Save" : "Delete"}
+        isDestructive={confirmModal.type === 'delete'}
+        onConfirm={executeConfirmAction}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </div>
   );
 };
@@ -903,12 +1037,19 @@ const EditablePage = ({
 }: { 
   state: EditableState, 
   setState: React.Dispatch<React.SetStateAction<EditableState>>, 
-  onSave: (img: GeneratedImage) => void, 
+  onSave: (img: GeneratedImage) => Promise<void>, 
   onError: (msg: string) => void 
 }) => {
   const { baseImage, instruction, resultImage } = state;
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  
+  // Confirmation State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'save' | 'delete';
+  }>({ isOpen: false, type: 'save' });
 
   const updateState = (updates: Partial<EditableState>) => {
     setState(prev => ({ ...prev, ...updates }));
@@ -940,6 +1081,20 @@ const EditablePage = ({
     }
   };
 
+  const executeConfirmAction = async () => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    
+    if (confirmModal.type === 'save') {
+      if (!resultImage) return;
+      setIsSaving(true);
+      await onSave(resultImage);
+      setIsSaving(false);
+    } else if (confirmModal.type === 'delete') {
+      updateState({ baseImage: null });
+      onError("Image removed from workspace.");
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="mb-8">
@@ -954,7 +1109,10 @@ const EditablePage = ({
             {baseImage ? (
               <>
                  <img src={URL.createObjectURL(baseImage)} alt="Original" className="w-full h-full object-contain" />
-                 <button onClick={() => updateState({ baseImage: null })} className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button 
+                    onClick={() => setConfirmModal({ isOpen: true, type: 'delete' })}
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                 >
                    <Trash2 size={16} />
                  </button>
               </>
@@ -997,7 +1155,13 @@ const EditablePage = ({
                   <div className="absolute bottom-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <button onClick={() => setPreviewImage(resultImage)} className="p-3 bg-black text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Maximize2 size={20} /></button>
                       <a href={resultImage.url} download="kimicode-edit.png" className="p-3 bg-black text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Download size={20} /></a>
-                      <button onClick={() => onSave(resultImage)} className="p-3 bg-gold-500 text-white rounded-full shadow-xl hover:scale-110 transition-transform"><Save size={20} /></button>
+                      <button 
+                        onClick={() => setConfirmModal({ isOpen: true, type: 'save' })}
+                        disabled={isSaving}
+                        className="p-3 bg-gold-500 text-white rounded-full shadow-xl hover:scale-110 transition-transform disabled:opacity-70"
+                      >
+                         {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                      </button>
                   </div>
                </div>
              ) : (
@@ -1013,6 +1177,21 @@ const EditablePage = ({
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
         {previewImage && <img src={previewImage.url} alt="Full" className="max-w-full max-h-[85vh] rounded-lg mx-auto block" />}
       </Modal>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog 
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.type === 'save' ? "Save to Cloud?" : "Remove Image?"}
+        message={
+          confirmModal.type === 'save' 
+          ? "This will save the edited image to your cloud collection. Proceed?" 
+          : "This will remove the current image from the workspace."
+        }
+        confirmText={confirmModal.type === 'save' ? "Save" : "Remove"}
+        isDestructive={confirmModal.type === 'delete'}
+        onConfirm={executeConfirmAction}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </div>
   );
 };
@@ -1356,6 +1535,17 @@ const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
           {collection.map((img) => (
             <div key={img.id} className="break-inside-avoid bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-lg border border-silver-100 dark:border-zinc-800 group relative transition-colors">
               <img src={img.url} alt="Saved" className="w-full h-auto" />
+              <div className="absolute top-3 right-3 flex gap-1">
+                 {img.isSynced ? (
+                   <div className="bg-black/50 backdrop-blur text-white p-1.5 rounded-full" title="Synced to Cloud">
+                      <Cloud size={14} />
+                   </div>
+                 ) : (
+                   <div className="bg-gold-500/50 backdrop-blur text-white p-1.5 rounded-full" title="Local Only">
+                      <CloudLightning size={14} />
+                   </div>
+                 )}
+              </div>
               <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-between">
                  <p className="text-white text-xs line-clamp-3 opacity-80">{img.prompt}</p>
                  <div className="flex items-center gap-3 mt-4">

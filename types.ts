@@ -1,3 +1,4 @@
+
 export interface GeneratedImage {
   id: string;
   url: string; // Base64 or Blob URL
@@ -5,6 +6,7 @@ export interface GeneratedImage {
   model: string;
   date: number;
   aspectRatio?: string;
+  isSynced?: boolean; // New property to track cloud storage status
 }
 
 export enum AppRoute {
