@@ -6,7 +6,7 @@ import {
   Trash2, Loader2, Sparkles, Layers, Video, Film,
   Crop, Sliders, Check, RotateCcw, Moon, Sun, AlertCircle,
   ChevronsUp, FileText, Copy, Music, File as FileIcon, FileType,
-  Cloud, CloudLightning, LogOut
+  Cloud, CloudLightning, LogOut, Calendar, Smartphone, Monitor
 } from 'lucide-react';
 import { 
   GeneratedImage, AppRoute, ImageModel, AspectRatio,
@@ -28,7 +28,8 @@ const Button = ({
     primary: "bg-black text-white hover:bg-zinc-800 shadow-lg hover:shadow-xl dark:bg-gold-500 dark:text-black dark:hover:bg-gold-400",
     secondary: "bg-white text-black border-2 border-gray-100 hover:border-gold-400 hover:text-gold-600 shadow-sm dark:bg-transparent dark:text-silver-200 dark:border-zinc-700 dark:hover:border-gold-500 dark:hover:text-gold-400",
     gold: "bg-gold-500 text-white hover:bg-gold-600 shadow-lg hover:shadow-gold-400/50 dark:bg-gold-600 dark:hover:bg-gold-500",
-    ghost: "text-gray-500 hover:text-black hover:bg-silver-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-zinc-800"
+    ghost: "text-gray-500 hover:text-black hover:bg-silver-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-zinc-800",
+    danger: "bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30"
   };
 
   return (
@@ -472,6 +473,13 @@ export default function App() {
     }
   };
 
+  const removeFromCollection = (id: string) => {
+    const updated = collection.filter(img => img.id !== id);
+    setCollection(updated);
+    localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+    showNotification("Image permanently deleted.");
+  };
+
   const showNotification = (msg: string) => {
     if (notificationTimeoutRef.current) {
       clearTimeout(notificationTimeoutRef.current);
@@ -527,7 +535,13 @@ export default function App() {
           />
         );
       case AppRoute.COLLECTION:
-        return <CollectionPage collection={collection} />;
+        return (
+          <CollectionPage 
+            collection={collection} 
+            onDelete={removeFromCollection}
+            onError={showNotification}
+          />
+        );
       default:
         return (
           <ImaginablePage 
@@ -542,8 +556,8 @@ export default function App() {
 
   const NavContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      <div className="p-8">
-        <div className="flex items-center gap-3 mb-10">
+      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-zinc-700">
+        <div className="flex items-center gap-3 mb-8 px-2">
             <div className="w-10 h-10 flex-shrink-0 bg-black dark:bg-gold-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold text-xl">K</div>
             <div className="text-2xl font-black tracking-tight text-black dark:text-white">
               KIMI<span className="text-gold-500 dark:text-gold-400">CODE</span>
@@ -555,7 +569,7 @@ export default function App() {
             )}
         </div>
         
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           {[
             { id: AppRoute.IMAGINABLE, icon: Sparkles, label: 'Imaginable' },
             { id: AppRoute.EDITABLE, icon: Edit, label: 'Editable' },
@@ -579,22 +593,22 @@ export default function App() {
         </nav>
       </div>
 
-      <div className="mt-auto p-8 border-t border-silver-100 dark:border-zinc-800 space-y-4">
+      <div className="p-4 border-t border-silver-100 dark:border-zinc-800 space-y-3 bg-white dark:bg-zinc-900">
         <button 
           onClick={toggleTheme}
-          className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-silver-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-silver-200 dark:hover:bg-zinc-700 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-silver-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-silver-200 dark:hover:bg-zinc-700 transition-colors"
         >
-          <span className="flex items-center gap-2 font-medium">
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          <span className="flex items-center gap-2 font-medium text-sm">
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
             {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
           </span>
         </button>
 
-        <div className="bg-gradient-to-br from-silver-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-4 rounded-xl border border-silver-200 dark:border-zinc-700">
-          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Status</p>
+        <div className="bg-gradient-to-br from-silver-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-3 rounded-xl border border-silver-200 dark:border-zinc-700">
+          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Status</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="text-sm font-medium text-black dark:text-white">Systems Operational</span>
+            <span className="text-xs font-bold text-black dark:text-white">Systems Operational</span>
           </div>
         </div>
       </div>
@@ -1521,8 +1535,30 @@ const Any2TextPage = ({
 };
 
 // 5. COLLECTION PAGE
-const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
+const CollectionPage = ({ 
+  collection, 
+  onDelete,
+  onError 
+}: { 
+  collection: GeneratedImage[], 
+  onDelete: (id: string) => void,
+  onError: (msg: string) => void
+}) => {
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleCopyPrompt = (text: string) => {
+    navigator.clipboard.writeText(text);
+    onError("Prompt copied to clipboard");
+  };
+
+  const handleDelete = () => {
+    if (previewImage) {
+      onDelete(previewImage.id);
+      setPreviewImage(null);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -1572,9 +1608,89 @@ const CollectionPage = ({ collection }: { collection: GeneratedImage[] }) => {
         </div>
       )}
 
+      {/* Detailed Modal View */}
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
-        {previewImage && <img src={previewImage.url} alt="Full" className="max-w-full max-h-[85vh] rounded-lg mx-auto block" />}
+        {previewImage && (
+           <div className="bg-white dark:bg-zinc-900 w-full max-w-6xl rounded-2xl overflow-hidden shadow-2xl flex flex-col lg:flex-row h-[85vh] lg:h-[700px]">
+             
+             {/* Left: Image Viewer */}
+             <div className="flex-1 bg-black/5 dark:bg-black/40 flex items-center justify-center p-8 lg:border-r border-silver-200 dark:border-zinc-800 relative group">
+                <img 
+                  src={previewImage.url} 
+                  alt="Detail View" 
+                  className="max-w-full max-h-full object-contain shadow-xl rounded-lg" 
+                />
+             </div>
+
+             {/* Right: Details & Actions */}
+             <div className="w-full lg:w-[400px] flex flex-col bg-white dark:bg-zinc-900 p-8 border-l border-silver-100 dark:border-zinc-800">
+                <div className="flex items-center gap-3 mb-6">
+                   <div className="w-10 h-10 rounded-full bg-gold-100 dark:bg-gold-900/30 text-gold-600 dark:text-gold-400 flex items-center justify-center">
+                     <Sparkles size={20} />
+                   </div>
+                   <div>
+                     <h3 className="text-lg font-bold text-black dark:text-white leading-tight">Prompt Details</h3>
+                     <span className="text-xs text-gray-400">Created {new Date(previewImage.date).toLocaleDateString()}</span>
+                   </div>
+                </div>
+
+                {/* Prompt Text Area */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-silver-50 dark:bg-zinc-950 rounded-xl p-4 border border-silver-100 dark:border-zinc-800 mb-6">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    {previewImage.prompt}
+                  </p>
+                </div>
+
+                {/* Metadata */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                   <div className="p-3 bg-silver-50 dark:bg-zinc-800 rounded-lg">
+                      <span className="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Model</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate block" title={previewImage.model}>
+                        {previewImage.model.split('-')[0]}...
+                      </span>
+                   </div>
+                   <div className="p-3 bg-silver-50 dark:bg-zinc-800 rounded-lg">
+                      <span className="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Ratio</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        {previewImage.aspectRatio || '1:1'}
+                      </span>
+                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-auto">
+                   <Button 
+                     onClick={() => handleCopyPrompt(previewImage.prompt)} 
+                     variant="secondary" 
+                     className="flex-1"
+                     icon={Copy}
+                   >
+                     Copy Prompt
+                   </Button>
+                   <Button 
+                      onClick={() => setShowDeleteConfirm(true)} 
+                      variant="danger" 
+                      className="px-4"
+                      icon={Trash2}
+                      title="Delete from Collection"
+                   >
+                   </Button>
+                </div>
+             </div>
+           </div>
+        )}
       </Modal>
+
+      {/* Delete Confirmation inside Collection */}
+      <ConfirmDialog 
+        isOpen={showDeleteConfirm}
+        title="Delete Image?"
+        message="Are you sure you want to delete this image from your collection? This action cannot be undone."
+        confirmText="Delete"
+        isDestructive={true}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 };
