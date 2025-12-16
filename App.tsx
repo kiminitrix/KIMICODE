@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Menu, X, Image as ImageIcon, Wand2, Edit, PlaySquare, 
   Download, Save, Maximize2, XCircle, ChevronDown, Plus, 
@@ -53,7 +54,7 @@ const Card = ({ children, className = '' }: any) => (
 
 const Modal = ({ isOpen, onClose, children }: any) => {
   if (!isOpen) return null;
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <button onClick={onClose} className="absolute top-6 right-6 text-white hover:text-gold-400 transition-colors z-50">
         <XCircle size={40} />
@@ -61,7 +62,8 @@ const Modal = ({ isOpen, onClose, children }: any) => {
       <div className="max-w-7xl w-full max-h-[90vh] overflow-auto relative flex items-center justify-center">
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -85,7 +87,7 @@ const ConfirmDialog = ({
   isDestructive?: boolean;
 }) => {
   if (!isOpen) return null;
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-silver-200 dark:border-zinc-800 transform scale-100 transition-all">
         <h3 className="text-xl font-bold text-black dark:text-white mb-2">{title}</h3>
@@ -109,7 +111,8 @@ const ConfirmDialog = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
