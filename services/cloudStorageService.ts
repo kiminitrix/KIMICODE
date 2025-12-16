@@ -12,20 +12,16 @@ export const uploadImageToCloud = async (image: GeneratedImage): Promise<Generat
   return new Promise((resolve, reject) => {
     console.log(`[CloudStorage] Uploading image ${image.id}...`);
     
-    // Simulate network latency (1-2 seconds)
-    const delay = 1000 + Math.random() * 1000;
+    // Simulate network latency (0.5 - 1.5 seconds)
+    const delay = 500 + Math.random() * 1000;
 
     setTimeout(() => {
-      // Simulate a random error (e.g., 5% chance of failure)
-      if (Math.random() < 0.05) {
-        reject(new Error("Cloud storage connection timed out."));
-        return;
-      }
-
+      // In a real implementation, we would handle actual network errors here.
+      // For this environment, we ensure success to fix the "saving" experience.
       console.log(`[CloudStorage] Upload success: ${image.id}`);
 
       // Return the image with the 'isSynced' flag set to true.
-      // In a real app, you would also likely replace 'url' with the new remote URL (e.g., https://s3.aws.com/...)
+      // In a real app, you would also likely replace 'url' with the new remote URL.
       resolve({
         ...image,
         isSynced: true

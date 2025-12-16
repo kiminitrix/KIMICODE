@@ -449,27 +449,52 @@ export default function App() {
 
   // Save collection handler with Cloud Storage
   const addToCollection = async (img: GeneratedImage) => {
-    // Notify user upload is starting
     showNotification("Saving to Cloud...");
     
     try {
       // 1. Upload to Cloud
       const syncedImage = await CloudStorageService.uploadImageToCloud(img);
       
-      // 2. Save result to collection (with synced status)
-      const updated = [syncedImage, ...collection];
-      setCollection(updated);
-      localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+      // 2. Update Collection (Handle Duplicates & Storage Limits)
+      setCollection(prev => {
+        const index = prev.findIndex(item => item.id === img.id);
+        let updated;
+        if (index >= 0) {
+            updated = [...prev];
+            updated[index] = syncedImage; 
+        } else {
+            updated = [syncedImage, ...prev];
+        }
+        
+        try {
+            localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+        } catch (e) {
+            console.error("Storage limit reached", e);
+            // Even if local storage fails, we still show success as it's in the session state
+            showNotification("Storage full! Saved to cloud only (session).");
+        }
+        return updated;
+      });
       
       showNotification("Saved to Collection & Cloud");
     } catch (e) {
       console.error("Save failed:", e);
       showNotification("Cloud upload failed. Saved locally.");
       
-      // Fallback: Save locally even if cloud fails
-      const updated = [img, ...collection];
-      setCollection(updated);
-      localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+      // Fallback: Save locally
+      setCollection(prev => {
+         // Check duplicate to avoid adding failed upload multiple times if user retries
+         const index = prev.findIndex(item => item.id === img.id);
+         if (index >= 0) return prev;
+
+         const updated = [img, ...prev];
+         try {
+            localStorage.setItem('kimicode_collection', JSON.stringify(updated));
+         } catch (storageError) {
+             showNotification("Storage full! Cannot save locally.");
+         }
+         return updated;
+      });
     }
   };
 
@@ -1635,8 +1660,8 @@ const CollectionPage = ({
                 </div>
 
                 {/* Prompt Text Area */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar bg-silver-50 dark:bg-zinc-950 rounded-xl p-4 border border-silver-100 dark:border-zinc-800 mb-6">
-                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-silver-50 dark:bg-zinc-950 rounded-xl p-4 border border-silver-100 dark:border-zinc-800 mb-6 shadow-inner">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap break-words">
                     {previewImage.prompt}
                   </p>
                 </div>
