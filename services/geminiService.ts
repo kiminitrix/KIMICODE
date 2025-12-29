@@ -1,7 +1,6 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ImageModel } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper to convert file to base64
 export const fileToBase64 = (file: File): Promise<string> => {
@@ -22,9 +21,12 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 export const enhancePrompt = async (originalPrompt: string): Promise<string> => {
   if (!originalPrompt) return "";
+  // Create a new instance right before the API call to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      // Use gemini-3-flash-preview for basic text tasks.
+      model: 'gemini-3-flash-preview',
       contents: `You are an expert AI image prompt engineer. Rewrite the following user prompt to be more descriptive, artistic, and detailed to produce a high-quality image. Return ONLY the enhanced prompt, no explanation.
       
       User Prompt: "${originalPrompt}"`,
@@ -43,6 +45,8 @@ export const generateImage = async (
   referenceImages: File[] = []
 ): Promise<string[]> => {
   const images: string[] = [];
+  // Create a new instance right before the API call to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // IMAGEN MODELS
   if (model.startsWith('imagen')) {
@@ -137,6 +141,8 @@ export const editImage = async (
   baseImage: File,
   instruction: string
 ): Promise<string> => {
+  // Create a new instance right before the API call to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const base64 = await fileToBase64(baseImage);
     
@@ -174,6 +180,8 @@ export const upscaleImage = async (
   base64Url: string,
   aspectRatio: string = '1:1'
 ): Promise<string> => {
+  // Create a new instance right before the API call to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     // Determine MIME type from data URL if possible, otherwise default
     const mimeMatch = base64Url.match(/data:([^;]+);/);
@@ -229,6 +237,8 @@ export const analyzeImageForPrompt = async (
   image: File,
   type: 'image' | 'video'
 ): Promise<string> => {
+  // Create a new instance right before the API call to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const base64 = await fileToBase64(image);
     const systemPrompt = type === 'image' 
@@ -236,7 +246,8 @@ export const analyzeImageForPrompt = async (
       : "Analyze the attached image. Based on this image, create a compelling cinematic video prompt. Describe the motion, camera movement, atmosphere, and event progression that would make sense starting from this frame.";
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash', // Flash is great for multimodal understanding
+      // Use gemini-3-flash-preview for basic text and understanding tasks.
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -258,6 +269,8 @@ export const analyzeImageForPrompt = async (
 };
 
 export const extractTextFromFile = async (file: File): Promise<string> => {
+  // Create a new instance right before the API call to ensure the latest API key is used.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const base64 = await fileToBase64(file);
     
@@ -272,7 +285,8 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      // Use gemini-3-flash-preview for basic text and extraction tasks.
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
