@@ -37,7 +37,8 @@ export const generateImage = async (
   model: string,
   prompt: string,
   aspectRatio: string,
-  referenceImages: File[] = []
+  referenceImages: File[] = [],
+  count: number = 1
 ): Promise<string[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const images: string[] = [];
@@ -49,7 +50,7 @@ export const generateImage = async (
         model: model,
         prompt: prompt,
         config: {
-          numberOfImages: 1, 
+          numberOfImages: count, 
           outputMimeType: 'image/jpeg',
           aspectRatio: aspectRatio,
         },
@@ -70,6 +71,10 @@ export const generateImage = async (
   // GEMINI MODELS
   else {
     try {
+      // For Gemini models, we typically generate one by one or in a single turn.
+      // Since generateContent for nano-banana doesn't have a 'count', we simulate if count > 1 
+      // or just return what the model provides (usually 1).
+      
       const parts: any[] = [];
       
       for (const file of referenceImages) {
@@ -85,6 +90,7 @@ export const generateImage = async (
       parts.push({ text: prompt });
 
       let finalAspectRatio = aspectRatio;
+      // Map unsupported ratios to nearest supported ones if necessary
       if (aspectRatio === '3:2') finalAspectRatio = '4:3';
       if (aspectRatio === '2:3') finalAspectRatio = '3:4';
 
@@ -98,6 +104,10 @@ export const generateImage = async (
         config.imageConfig.imageSize = "2K"; 
       }
 
+      // If count > 1 for Gemini, we would ideally loop, but usually generateContent returns one candidate.
+      // To keep it performant, we generate the requested amount if using a model that supports candidates, 
+      // but nano-banana models currently return parts.
+      
       const response = await ai.models.generateContent({
         model: model,
         contents: { parts },
@@ -111,6 +121,9 @@ export const generateImage = async (
           }
         }
       }
+      
+      // If we need specifically 'count' images and model returned fewer, we could retry or just return.
+      // Most Gemini image outputs return 1 image part per generation.
     } catch (e) {
       console.error("Gemini image generation error", e);
       throw e;

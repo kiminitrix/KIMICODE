@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -347,7 +348,7 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
     if (!prompt) return;
     setIsGenerating(true);
     try {
-      const results = await GeminiService.generateImage(model, prompt, aspectRatio, refImages);
+      const results = await GeminiService.generateImage(model, prompt, aspectRatio, refImages, count);
       const newImages = results.map(url => ({
         id: Date.now().toString() + Math.random().toString(),
         url, prompt, model, date: Date.now(), aspectRatio
@@ -389,7 +390,7 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
   return (
     <div className="space-y-8 animate-fade-in">
       <header>
-        <h1 className="text-4xl font-bold mb-2">Imaginable</h1>
+        <h1 className="text-4xl font-bold mb-2 text-black dark:text-white">Imaginable</h1>
         <p className="text-gray-500 dark:text-gray-400">Transform your ideas into visual reality using state-of-the-art AI.</p>
       </header>
       
@@ -404,7 +405,7 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
                 <textarea 
                   value={prompt}
                   onChange={(e) => updateState({ prompt: e.target.value })}
-                  className="w-full p-4 bg-silver-100 dark:bg-zinc-800 rounded-xl min-h-[160px] outline-none text-sm dark:text-white dark:placeholder-gray-500 transition-colors"
+                  className="w-full p-4 bg-silver-100 dark:bg-zinc-800 rounded-xl min-h-[160px] outline-none text-sm dark:text-white dark:placeholder-gray-500 transition-colors resize-none border-2 border-transparent focus:border-gold-400"
                   placeholder="A futuristic city with silver towers and golden bridges..."
                 />
                 <button 
@@ -514,23 +515,24 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
 
         {/* Right Column: Preview/Results */}
         <div className="lg:col-span-8">
-          <div className="min-h-[600px] border-2 border-dashed border-silver-300 dark:border-zinc-800 rounded-3xl bg-white/30 dark:bg-zinc-900/10 flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="min-h-[600px] border-2 border-dashed border-silver-300 dark:border-zinc-800 rounded-3xl bg-white/30 dark:bg-zinc-900/10 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500">
             {isGenerating ? (
               <div className="flex flex-col items-center gap-4 animate-pulse">
                 <div className="w-16 h-16 rounded-full bg-gold-400/20 flex items-center justify-center">
                   <Loader2 className="animate-spin text-gold-500" size={32} />
                 </div>
-                <p className="text-gray-400 font-medium">Brewing your vision...</p>
+                <p className="text-gray-400 font-medium tracking-tight">Brewing your vision...</p>
               </div>
             ) : generatedResults.length > 0 ? (
-              <div className="w-full h-full p-8 overflow-y-auto">
+              <div className="w-full h-full p-8 overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {generatedResults.map((img: any) => (
-                    <div key={img.id} className="group relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-silver-100 dark:border-zinc-800 animate-in zoom-in duration-300">
-                      <img src={img.url} alt="Generated" className="w-full h-auto" />
+                    <div key={img.id} className="group relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-silver-100 dark:border-zinc-800 animate-in zoom-in duration-300 hover:shadow-gold-500/20 transition-all">
+                      <img src={img.url} alt="Generated" className="w-full h-auto object-cover aspect-auto" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
+                         {/* Fix: Using onSave prop instead of addToCollection */}
                          <button 
-                           onClick={() => onSave(img)} 
+                           onClick={() => { onSave(img); }} 
                            title="Save to Collection"
                            className="p-3 bg-gold-500 rounded-full text-white shadow-lg hover:scale-110 active:scale-95 transition-all"
                          >
@@ -570,10 +572,15 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
 
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
         {previewImage && (
-          <div className="bg-white dark:bg-zinc-900 p-2 rounded-2xl shadow-2xl">
+          <div className="bg-white dark:bg-zinc-900 p-2 rounded-2xl shadow-2xl animate-in zoom-in duration-200">
             <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-xl" />
-            <div className="p-4">
-               <p className="text-sm text-gray-500 dark:text-gray-400 italic line-clamp-2">"{previewImage.prompt}"</p>
+            <div className="p-4 flex justify-between items-center">
+               <p className="text-sm text-gray-500 dark:text-gray-400 italic line-clamp-1 max-w-[70%]">"{previewImage.prompt}"</p>
+               <div className="flex gap-3">
+                  <a href={previewImage.url} download className="text-black dark:text-white hover:text-gold-500 transition-colors"><Download size={20} /></a>
+                  {/* Fix: Using onSave prop instead of addToCollection */}
+                  <button onClick={() => onSave(previewImage)} className="text-black dark:text-white hover:text-gold-500 transition-colors"><Save size={20} /></button>
+               </div>
             </div>
           </div>
         )}
@@ -594,6 +601,7 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
     try {
       const url = await GeminiService.editImage(baseImage, instruction);
       updateState({ resultImage: { id: Date.now().toString(), url, prompt: instruction, model: ImageModel.GEMINI_FLASH_IMAGE, date: Date.now() } });
+      onError("Edit successful!");
     } catch (e) {
       onError("Edit failed.");
     } finally {
@@ -613,13 +621,16 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
         <div className="space-y-8">
           <Card className="p-6 flex flex-col gap-4">
             <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Source Image</h3>
-            <div className="w-full h-[400px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden group transition-colors">
+            <div className="w-full h-[400px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden group transition-all duration-300">
               {baseImage ? (
-                <img src={URL.createObjectURL(baseImage as Blob)} alt="Original" className="w-full h-full object-contain" />
+                <>
+                  <img src={URL.createObjectURL(baseImage as Blob)} alt="Original" className="w-full h-full object-contain" />
+                  <button onClick={() => updateState({ baseImage: null })} className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>
+                </>
               ) : (
-                <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500">
-                  <Plus size={40} />
-                  <span className="font-semibold">Upload Image to Edit</span>
+                <label className="cursor-pointer flex flex-col items-center gap-3 text-gray-400 dark:text-gray-500 hover:text-gold-500 transition-colors">
+                  <div className="w-16 h-16 rounded-full bg-silver-200 dark:bg-zinc-700 flex items-center justify-center"><Plus size={32} /></div>
+                  <span className="font-bold tracking-tight">Upload Image to Edit</span>
                   <input type="file" accept="image/*" onChange={(e) => e.target.files && updateState({ baseImage: e.target.files[0] })} className="hidden" />
                 </label>
               )}
@@ -627,7 +638,7 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
           </Card>
 
           {/* Instruction Section - Positioned at the bottom of the column below the image */}
-          <Card className="p-8">
+          <Card className="p-8 border-2 border-transparent hover:border-gold-500/20 transition-all">
              <div className="space-y-6">
                <div>
                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Instruction</label>
@@ -642,7 +653,7 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
                    <Button 
                      onClick={handleEdit} 
                      disabled={!baseImage || !instruction || isProcessing} 
-                     variant="primary" 
+                     variant="gold" 
                      className="w-full" 
                      icon={isProcessing ? Loader2 : Edit}
                    >
@@ -658,15 +669,27 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
         </div>
 
         {/* Right Column: Result Output */}
-        <Card className="p-6 h-full min-h-[550px] flex flex-col gap-4">
+        <Card className="p-6 h-full min-h-[550px] flex flex-col gap-4 relative">
            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Result Image</h3>
-           <div className="flex-1 flex items-center justify-center bg-silver-50 dark:bg-zinc-950 rounded-xl border border-silver-100 dark:border-zinc-800 transition-colors">
+           <div className="flex-1 flex items-center justify-center bg-silver-50 dark:bg-zinc-950 rounded-xl border border-silver-100 dark:border-zinc-800 transition-colors relative overflow-hidden">
              {resultImage ? (
-               <img src={resultImage.url} alt="Result" className="w-full h-full object-contain" />
+               <>
+                 <img src={resultImage.url} alt="Result" className="w-full h-full object-contain animate-in fade-in duration-500" />
+                 <div className="absolute bottom-4 right-4 flex gap-2">
+                    <button onClick={() => onSave(resultImage)} className="p-3 bg-gold-500 text-white rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all"><Save size={20} /></button>
+                    <a href={resultImage.url} download className="p-3 bg-white text-black rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all"><Download size={20} /></a>
+                 </div>
+               </>
              ) : (
                <div className="text-gray-300 dark:text-gray-700 flex flex-col items-center gap-2">
-                 <Wand2 size={48} />
-                 <p className="font-medium">Result will appear here</p>
+                 <div className="w-20 h-20 bg-silver-100 dark:bg-zinc-800 rounded-3xl flex items-center justify-center mb-2"><Wand2 size={40} /></div>
+                 <p className="font-bold tracking-tight">Result will appear here</p>
+               </div>
+             )}
+             {isProcessing && (
+               <div className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-in fade-in">
+                  <Loader2 className="animate-spin text-gold-500" size={48} />
+                  <p className="text-black dark:text-white font-bold">Applying changes...</p>
                </div>
              )}
            </div>
@@ -696,21 +719,49 @@ const PromptablePage = ({ state, setState, onError }: any) => {
   };
 
   return (
-    <div className="space-y-8">
-      <header><h1 className="text-4xl font-bold mb-2">Promptable</h1></header>
+    <div className="space-y-8 animate-fade-in">
+      <header>
+        <h1 className="text-4xl font-bold mb-2">Promptable</h1>
+        <p className="text-gray-500 dark:text-gray-400">Reverse-engineer prompts from any visual media.</p>
+      </header>
       <div className="grid lg:grid-cols-2 gap-8">
         <Card className="p-6 space-y-6">
-          <div className="h-[300px] border-2 border-dashed border-silver-300 rounded-xl flex items-center justify-center">
-            {image ? <img src={URL.createObjectURL(image as Blob)} className="h-full object-contain" /> : <label className="cursor-pointer"><input type="file" accept="image/*" onChange={(e) => e.target.files && updateState({ image: e.target.files[0] })} className="hidden" /><ImageIcon size={48} className="text-gray-400" /></label>}
+          <div className="h-[400px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl flex items-center justify-center relative overflow-hidden bg-silver-100 dark:bg-zinc-800">
+            {image ? (
+               <>
+                 <img src={URL.createObjectURL(image as Blob)} className="h-full object-contain" />
+                 <button onClick={() => updateState({ image: null })} className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-colors"><X size={16} /></button>
+               </>
+            ) : (
+               <label className="cursor-pointer flex flex-col items-center gap-3 text-gray-400 hover:text-gold-500 transition-colors">
+                  <input type="file" accept="image/*" onChange={(e) => e.target.files && updateState({ image: e.target.files[0] })} className="hidden" />
+                  <ImageIcon size={64} className="mb-2" />
+                  <span className="font-bold">Upload Source Media</span>
+               </label>
+            )}
           </div>
           <div className="flex gap-4">
-            <Button onClick={() => handleAnalyze('image')} disabled={!image || isAnalyzing} className="flex-1" icon={ImageIcon}>Image</Button>
-            <Button onClick={() => handleAnalyze('video')} disabled={!image || isAnalyzing} variant="secondary" className="flex-1" icon={Video}>Video</Button>
+            <Button onClick={() => handleAnalyze('image')} disabled={!image || isAnalyzing} variant="gold" className="flex-1" icon={isAnalyzing ? Loader2 : ImageIcon}>Analyze Image</Button>
+            <Button onClick={() => handleAnalyze('video')} disabled={!image || isAnalyzing} variant="secondary" className="flex-1" icon={isAnalyzing ? Loader2 : Video}>Analyze Video</Button>
           </div>
         </Card>
-        <Card className="p-8 bg-black dark:bg-zinc-900 text-white min-h-[400px]">
-           <h3 className="text-gold-500 font-bold mb-4">Prompt</h3>
-           {isAnalyzing ? <div className="flex justify-center mt-20"><Loader2 className="animate-spin" /></div> : <p className="text-gray-300">{generatedPrompt || 'Upload and analyze...'}</p>}
+        <Card className="p-8 bg-zinc-900 text-white min-h-[400px] flex flex-col border border-zinc-800 shadow-2xl relative">
+           <div className="flex justify-between items-center mb-6">
+              <h3 className="text-gold-500 font-black tracking-widest uppercase text-xs">Generated Prompt</h3>
+              {generatedPrompt && <button onClick={() => { navigator.clipboard.writeText(generatedPrompt); onError("Copied!"); }} className="text-gray-400 hover:text-white transition-colors"><Copy size={18} /></button>}
+           </div>
+           <div className="flex-1 flex flex-col justify-center">
+             {isAnalyzing ? (
+               <div className="flex flex-col items-center gap-4 animate-pulse">
+                 <Loader2 className="animate-spin text-gold-500" size={40} />
+                 <p className="text-gray-400 text-sm">Gemini is thinking...</p>
+               </div>
+             ) : (
+               <p className="text-gray-300 leading-relaxed font-medium whitespace-pre-wrap">
+                 {generatedPrompt || 'Upload an image and choose an analysis type to begin prompt extraction.'}
+               </p>
+             )}
+           </div>
         </Card>
       </div>
     </div>
@@ -747,6 +798,10 @@ const Any2TextPage = ({ state, setState, onError }: any) => {
     }
   };
 
+  const removeFile = (id: string) => {
+    setState((prev: any) => ({ results: prev.results.filter((r: any) => r.id !== id) }));
+  };
+
   const renderFilePreview = (item: any) => {
     const { type } = item.file;
     if (type.startsWith('image/')) return <img src={item.previewUrl} className="max-h-full object-contain" />;
@@ -757,27 +812,54 @@ const Any2TextPage = ({ state, setState, onError }: any) => {
   };
 
   return (
-    <div className="space-y-8">
-      <header><h1 className="text-4xl font-bold mb-2">Any2Text</h1></header>
-      <Card className="p-8 border-2 border-dashed border-silver-300 dark:border-zinc-700 bg-silver-50 dark:bg-zinc-800/50 flex flex-col items-center justify-center cursor-pointer">
-        <label className="w-full text-center cursor-pointer"><FileType size={48} className="text-gray-400 mx-auto mb-4" /><span>Drop files here or click to upload</span><input type="file" multiple accept="image/*,video/*,audio/*,application/pdf" onChange={handleFileChange} className="hidden" /></label>
+    <div className="space-y-8 animate-fade-in">
+      <header>
+        <h1 className="text-4xl font-bold mb-2">Any2Text</h1>
+        <p className="text-gray-500 dark:text-gray-400">Extract intelligence from images, videos, audio, and documents.</p>
+      </header>
+      <Card className="p-12 border-2 border-dashed border-silver-300 dark:border-zinc-700 bg-silver-50 dark:bg-zinc-800/20 flex flex-col items-center justify-center cursor-pointer group hover:border-gold-500 transition-colors">
+        <label className="w-full text-center cursor-pointer">
+           <FileType size={64} className="text-gray-400 mx-auto mb-4 group-hover:text-gold-500 transition-colors" />
+           <span className="text-lg font-bold text-gray-500 dark:text-gray-400">Drop files here or click to upload</span>
+           <p className="text-sm text-gray-400 mt-2">Supports Image, Video, Audio, and PDF</p>
+           <input type="file" multiple accept="image/*,video/*,audio/*,application/pdf" onChange={handleFileChange} className="hidden" />
+        </label>
       </Card>
       <div className="space-y-6">
          {results.map((item: any) => (
-           <Card key={item.id} className="p-6 grid lg:grid-cols-2 gap-8">
-             <div className="h-[400px] bg-silver-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center overflow-hidden">
+           <Card key={item.id} className="p-6 grid lg:grid-cols-2 gap-8 relative animate-in slide-in-from-bottom-5">
+             <button onClick={() => removeFile(item.id)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors z-10"><XCircle size={20} /></button>
+             <div className="h-[400px] bg-silver-100 dark:bg-zinc-800 rounded-xl flex items-center justify-center overflow-hidden border border-silver-200 dark:border-zinc-700">
                {renderFilePreview(item)}
              </div>
              <div className="flex flex-col gap-4">
-                <div className="flex-1 bg-silver-50 dark:bg-zinc-950 p-4 rounded-xl font-mono text-sm overflow-auto custom-scrollbar">
-                  {item.isLoading ? (
-                    <div className="flex flex-col items-center justify-center h-full gap-4 opacity-50"><Loader2 className="animate-spin" /><span>Consulting Gemini for extraction...</span></div>
-                  ) : item.extractedText || 'Ready for extraction...'}
+                <div className="flex justify-between items-center px-1">
+                   <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Extracted Content</h4>
+                   <span className="text-[10px] text-gray-400">{item.file.name}</span>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => handleExtract(item.id)} disabled={item.isLoading} variant="gold" className="flex-1" icon={item.isLoading ? Loader2 : Sparkles}>Extract</Button>
+                <div className="flex-1 bg-silver-50 dark:bg-zinc-950 p-6 rounded-xl font-mono text-sm overflow-auto custom-scrollbar border border-silver-100 dark:border-zinc-800 min-h-[280px]">
+                  {item.isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-4 opacity-70">
+                       <Loader2 className="animate-spin text-gold-500" size={32} />
+                       <span className="text-xs font-bold">Gemini is parsing the media...</span>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap dark:text-gray-300">
+                       {item.extractedText || <span className="text-gray-400 italic">No text extracted yet. Click the button below to process this file.</span>}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button onClick={() => handleExtract(item.id)} disabled={item.isLoading} variant="gold" className="flex-1" icon={item.isLoading ? Loader2 : Sparkles}>
+                     {item.isLoading ? 'Processing...' : 'Start Extraction'}
+                  </Button>
                   {item.extractedText && (
-                    <button onClick={() => { navigator.clipboard.writeText(item.extractedText); onError("Copied!"); }} className="p-3 border border-silver-200 dark:border-zinc-700 rounded-xl hover:bg-silver-100 dark:hover:bg-zinc-800 transition-colors"><Copy size={20} /></button>
+                    <button 
+                      onClick={() => { navigator.clipboard.writeText(item.extractedText); onError("Copied to clipboard!"); }} 
+                      className="p-4 border border-silver-200 dark:border-zinc-700 rounded-xl hover:bg-silver-100 dark:hover:bg-zinc-800 transition-all active:scale-95"
+                    >
+                      <Copy size={20} />
+                    </button>
                   )}
                 </div>
              </div>
@@ -789,29 +871,83 @@ const Any2TextPage = ({ state, setState, onError }: any) => {
 };
 
 // 5. COLLECTION PAGE
-const CollectionPage = ({ collection, onDelete }: any) => {
+const CollectionPage = ({ collection, onDelete, onError }: any) => {
   const [previewImage, setPreviewImage] = useState<any>(null);
+  
+  const handleDownload = (img: any) => {
+     const link = document.createElement('a');
+     link.href = img.url;
+     link.download = `kimicode-${img.id}.png`;
+     link.click();
+     onError("Download started.");
+  };
+
   return (
-    <div className="space-y-8">
-      <header className="flex justify-between items-end"><h1 className="text-4xl font-bold">Collection</h1><div className="text-sm font-bold text-gold-600">{collection.length} ITEMS</div></header>
-      {collection.length === 0 ? <div className="py-20 flex flex-col items-center text-gray-400"><Layers size={64} className="mb-6 opacity-20" /><p>Gallery is Empty</p></div> : (
+    <div className="space-y-8 animate-fade-in">
+      <header className="flex justify-between items-end border-b border-silver-200 dark:border-zinc-800 pb-6">
+         <div>
+            <h1 className="text-4xl font-bold text-black dark:text-white">Collection</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Your vault of AI-generated artistic assets.</p>
+         </div>
+         <div className="flex flex-col items-end">
+            <span className="text-[10px] font-black text-gold-600 dark:text-gold-500 uppercase tracking-widest">Storage Status</span>
+            <div className="text-2xl font-black text-black dark:text-white">{collection.length} <span className="text-xs font-medium text-gray-400">ITEMS</span></div>
+         </div>
+      </header>
+      
+      {collection.length === 0 ? (
+        <div className="py-32 flex flex-col items-center text-gray-300 dark:text-zinc-800">
+           <div className="w-24 h-24 rounded-full border-4 border-current flex items-center justify-center mb-6 opacity-20">
+              <Layers size={48} />
+           </div>
+           <p className="text-xl font-bold">Your gallery is empty</p>
+           <p className="text-sm mt-2 opacity-50">Head over to Imaginable to start creating.</p>
+        </div>
+      ) : (
         <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
           {collection.map((img: any) => (
-            <div key={img.id} className="break-inside-avoid bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-lg group relative border border-silver-100 dark:border-zinc-800">
-              <img src={img.url} className="w-full" />
-              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-between">
-                 <p className="text-white text-xs line-clamp-3">{img.prompt}</p>
+            <div key={img.id} className="break-inside-avoid group relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-lg border border-silver-100 dark:border-zinc-800 animate-in fade-in duration-500 hover:shadow-2xl transition-all">
+              <img src={img.url} className="w-full h-auto object-cover" />
+              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 p-6 flex flex-col justify-between backdrop-blur-[2px]">
+                 <div className="space-y-2">
+                    <p className="text-white text-[10px] font-black tracking-widest uppercase opacity-50">Prompt</p>
+                    <p className="text-white text-xs line-clamp-4 leading-relaxed italic">"{img.prompt}"</p>
+                 </div>
                  <div className="flex gap-2">
-                    <button onClick={() => setPreviewImage(img)} className="flex-1 py-2 bg-white text-black font-bold rounded">VIEW</button>
-                    <button onClick={() => onDelete(img.id)} className="p-2 bg-red-500 text-white rounded"><Trash2 size={16} /></button>
+                    <button onClick={() => setPreviewImage(img)} className="flex-1 py-3 bg-white text-black text-xs font-black rounded-lg hover:bg-gold-500 hover:text-white transition-all active:scale-95">VIEW LARGE</button>
+                    <button onClick={() => handleDownload(img)} className="p-3 bg-zinc-800 text-white rounded-lg hover:bg-gold-500 transition-all" title="Download"><Download size={18} /></button>
+                    <button onClick={() => onDelete(img.id)} className="p-3 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Delete"><Trash2 size={18} /></button>
                  </div>
               </div>
+              {img.isSynced && (
+                 <div className="absolute top-2 left-2 bg-green-500 w-2 h-2 rounded-full shadow-lg" title="Synced to Cloud"></div>
+              )}
             </div>
           ))}
         </div>
       )}
+      
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
-        {previewImage && <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-lg" />}
+        {previewImage && (
+          <div className="bg-white dark:bg-zinc-900 p-2 rounded-2xl shadow-2xl relative animate-in zoom-in duration-200">
+            <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-xl shadow-inner" />
+            <div className="p-6 space-y-4">
+               <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Creation Timestamp</p>
+                     <p className="text-xs text-black dark:text-white font-medium">{new Date(previewImage.date).toLocaleString()}</p>
+                  </div>
+                  <div className="flex gap-3">
+                     <button onClick={() => handleDownload(previewImage)} className="flex items-center gap-2 px-4 py-2 bg-black text-white dark:bg-gold-500 dark:text-black rounded-lg text-xs font-bold hover:scale-105 transition-all"><Download size={14} /> Download</button>
+                     <button onClick={() => { onDelete(previewImage.id); setPreviewImage(null); }} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:scale-105 transition-all"><Trash2 size={14} /> Delete</button>
+                  </div>
+               </div>
+               <div className="p-4 bg-silver-50 dark:bg-zinc-950 rounded-xl border border-silver-100 dark:border-zinc-800">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 italic leading-relaxed">"{previewImage.prompt}"</p>
+               </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
