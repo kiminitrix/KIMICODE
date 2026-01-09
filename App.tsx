@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -471,6 +470,9 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
                     <option value={AspectRatio.LANDSCAPE}>Landscape (16:9)</option>
                     <option value={AspectRatio.PORTRAIT}>Portrait (9:16)</option>
                     <option value={AspectRatio.STANDARD}>Standard (4:3)</option>
+                    <option value={AspectRatio.TALL}>Standard Portrait (3:4)</option>
+                    <option value={AspectRatio.LANDSCAPE_3_2}>Classic (3:2)</option>
+                    <option value={AspectRatio.PORTRAIT_2_3}>Classic Portrait (2:3)</option>
                   </select>
                   <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
                 </div>
@@ -527,8 +529,28 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
                     <div key={img.id} className="group relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-silver-100 dark:border-zinc-800 animate-in zoom-in duration-300">
                       <img src={img.url} alt="Generated" className="w-full h-auto" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
-                         <button onClick={() => onSave(img)} className="p-4 bg-gold-500 rounded-full text-white shadow-lg hover:scale-110 active:scale-95 transition-all"><Save size={20} /></button>
-                         <button onClick={() => setPreviewImage(img)} className="p-4 bg-white rounded-full text-black shadow-lg hover:scale-110 active:scale-95 transition-all"><Maximize2 size={20} /></button>
+                         <button 
+                           onClick={() => onSave(img)} 
+                           title="Save to Collection"
+                           className="p-3 bg-gold-500 rounded-full text-white shadow-lg hover:scale-110 active:scale-95 transition-all"
+                         >
+                           <Save size={18} />
+                         </button>
+                         <a 
+                           href={img.url} 
+                           download={`kimicode-${img.id}.png`}
+                           title="Download Image"
+                           className="p-3 bg-white rounded-full text-black shadow-lg hover:scale-110 active:scale-95 transition-all"
+                         >
+                           <Download size={18} />
+                         </a>
+                         <button 
+                           onClick={() => setPreviewImage(img)} 
+                           title="View Full Size"
+                           className="p-3 bg-white rounded-full text-black shadow-lg hover:scale-110 active:scale-95 transition-all"
+                         >
+                           <Maximize2 size={18} />
+                         </button>
                       </div>
                     </div>
                   ))}
