@@ -1,7 +1,6 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ImageModel } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper to convert file to base64
 export const fileToBase64 = (file: File): Promise<string> => {
@@ -10,9 +9,6 @@ export const fileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove data:image/png;base64, prefix if needed by API, 
-      // but GenAI SDK usually handles raw base64 data extraction from this format or we strip it.
-      // For GenAI 'inlineData', we need just the base64 string.
       const base64 = result.split(',')[1];
       resolve(base64);
     };
@@ -22,9 +18,10 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 export const enhancePrompt = async (originalPrompt: string): Promise<string> => {
   if (!originalPrompt) return "";
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: `You are an expert AI image prompt engineer. Rewrite the following user prompt to be more descriptive, artistic, and detailed to produce a high-quality image. Return ONLY the enhanced prompt, no explanation.
       
       User Prompt: "${originalPrompt}"`,
@@ -42,20 +39,17 @@ export const generateImage = async (
   aspectRatio: string,
   referenceImages: File[] = []
 ): Promise<string[]> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const images: string[] = [];
 
   // IMAGEN MODELS
   if (model.startsWith('imagen')) {
     try {
-      // Convert reference images if supported (Imagen usually text-to-image, but keeping logic clean)
-      // Note: Current GenAI SDK for Imagen via `generateImages` is primarily text-to-image.
-      
       const response = await ai.models.generateImages({
         model: model,
         prompt: prompt,
         config: {
-          numberOfImages: 1, // We will handle multiple by calling this function multiple times in the UI loop if needed, or pass prop. 
-          // Note: To simplify the service, we return 1 image per call here, and the UI loops.
+          numberOfImages: 1, 
           outputMimeType: 'image/jpeg',
           aspectRatio: aspectRatio,
         },
@@ -73,12 +67,11 @@ export const generateImage = async (
       throw e;
     }
   } 
-  // GEMINI NANO/BANANA MODELS
+  // GEMINI MODELS
   else {
     try {
       const parts: any[] = [];
       
-      // Add reference images
       for (const file of referenceImages) {
         const base64 = await fileToBase64(file);
         parts.push({
@@ -89,25 +82,20 @@ export const generateImage = async (
         });
       }
 
-      // Add prompt
       parts.push({ text: prompt });
 
-      // Handle unsupported aspect ratios for Gemini by mapping to closest valid ones
-      // Valid: "1:1", "3:4", "4:3", "9:16", "16:9"
       let finalAspectRatio = aspectRatio;
       if (aspectRatio === '3:2') finalAspectRatio = '4:3';
       if (aspectRatio === '2:3') finalAspectRatio = '3:4';
 
-      // Config
       const config: any = {
          imageConfig: {
            aspectRatio: finalAspectRatio,
          }
       };
       
-      // Add imageSize for Pro model
       if (model === ImageModel.GEMINI_PRO_IMAGE) {
-        config.imageConfig.imageSize = "2K"; // Defaulting to high quality for Pro
+        config.imageConfig.imageSize = "2K"; 
       }
 
       const response = await ai.models.generateContent({
@@ -116,7 +104,6 @@ export const generateImage = async (
         config: config
       });
 
-      // Extract images from response
       if (response.candidates?.[0]?.content?.parts) {
         for (const part of response.candidates[0].content.parts) {
           if (part.inlineData && part.inlineData.data) {
@@ -137,10 +124,9 @@ export const editImage = async (
   baseImage: File,
   instruction: string
 ): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const base64 = await fileToBase64(baseImage);
-    
-    // Using gemini-2.5-flash-image for editing/instruction based generation
     const response = await ai.models.generateContent({
       model: ImageModel.GEMINI_FLASH_IMAGE,
       contents: {
@@ -174,18 +160,13 @@ export const upscaleImage = async (
   base64Url: string,
   aspectRatio: string = '1:1'
 ): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    // Determine MIME type from data URL if possible, otherwise default
     const mimeMatch = base64Url.match(/data:([^;]+);/);
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-    
-    // Extract base64 from data URL
     const base64 = base64Url.includes(',') ? base64Url.split(',')[1] : base64Url;
-    
-    // Use Gemini Pro Image for high quality 2K upscaling
     const model = ImageModel.GEMINI_PRO_IMAGE;
     
-    // Map custom aspect ratios to closest supported ones
     let finalAspectRatio = aspectRatio;
     if (aspectRatio === '3:2') finalAspectRatio = '4:3';
     if (aspectRatio === '2:3') finalAspectRatio = '3:4';
@@ -208,7 +189,7 @@ export const upscaleImage = async (
       config: {
         imageConfig: {
           aspectRatio: finalAspectRatio,
-          imageSize: '2K' // Force 2K upscaling
+          imageSize: '2K' 
         }
       }
     });
@@ -218,7 +199,7 @@ export const upscaleImage = async (
         return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
-    throw new Error("Upscaling failed to return an image.");
+    throw new Error("Upscaling failed.");
   } catch (error) {
     console.error("Error upscaling image:", error);
     throw error;
@@ -229,14 +210,15 @@ export const analyzeImageForPrompt = async (
   image: File,
   type: 'image' | 'video'
 ): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const base64 = await fileToBase64(image);
     const systemPrompt = type === 'image' 
-      ? "Analyze the attached image deeply. Describe the subject, lighting, composition, style, colors, and camera angle in extreme detail. Output a finalized, high-quality text-to-image prompt that could be used to recreate this exact style."
-      : "Analyze the attached image. Based on this image, create a compelling cinematic video prompt. Describe the motion, camera movement, atmosphere, and event progression that would make sense starting from this frame.";
+      ? "Analyze the attached image deeply. Describe the subject, lighting, composition, style, colors, and camera angle in extreme detail. Output a finalized, high-quality text-to-image prompt."
+      : "Analyze the attached image. Based on this image, create a cinematic video prompt. Describe the motion, camera movement, and event progression starting from this frame.";
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash', // Flash is great for multimodal understanding
+      model: 'gemini-3-flash-preview', 
       contents: {
         parts: [
           {
@@ -258,9 +240,9 @@ export const analyzeImageForPrompt = async (
 };
 
 export const extractTextFromFile = async (file: File): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const base64 = await fileToBase64(file);
-    
     let prompt = "Extract all visible text from this content. Return ONLY the extracted text content.";
     
     if (file.type.startsWith('audio')) {
@@ -272,7 +254,7 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -281,9 +263,7 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
               mimeType: file.type,
             }
           },
-          { 
-            text: prompt 
-          }
+          { text: prompt }
         ]
       }
     });
