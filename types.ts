@@ -10,11 +10,15 @@ export interface GeneratedImage {
 }
 
 export enum AppRoute {
+  LOGIN = 'Login',
+  REGISTER = 'Register',
+  FORGOT_PASSWORD = 'Forgot Password',
+  CONTROL_PANEL = 'Control Panel',
   IMAGINABLE = 'Imaginable',
   EDITABLE = 'Editable',
   PROMPTABLE = 'Promptable',
-  ANY2TEXT = 'Any2Text',
-  COLLECTION = 'Collection'
+  COLLECTABLE = 'Collectable',
+  LOGOUT = 'Logout'
 }
 
 export enum ImageModel {
@@ -60,16 +64,4 @@ export interface EditableState {
 export interface PromptableState {
   image: File | null;
   generatedPrompt: string;
-}
-
-export interface TextExtractionResult {
-  id: string;
-  file: File;
-  previewUrl: string;
-  extractedText: string;
-  isLoading: boolean;
-}
-
-export interface Any2TextState {
-  results: TextExtractionResult[];
 }
