@@ -425,7 +425,7 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
               <div className="flex flex-wrap gap-2">
                 {refImages.map((file: File, idx: number) => (
                   <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-silver-200 dark:border-zinc-700">
-                    <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
+                    <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <button 
                       onClick={() => removeRefImage(idx)}
                       className="absolute top-0 right-0 bg-black/50 text-white p-0.5 rounded-bl-lg hover:bg-red-500 transition-colors"
@@ -528,7 +528,7 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {generatedResults.map((img: any) => (
                     <div key={img.id} className="group relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-silver-100 dark:border-zinc-800 animate-in zoom-in duration-300 hover:shadow-gold-500/20 transition-all">
-                      <img src={img.url} alt="Generated" className="w-full h-auto object-cover aspect-auto" />
+                      <img src={img.url} alt="Generated" className="w-full h-auto object-cover aspect-auto" referrerPolicy="no-referrer" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
                          {/* Fix: Using onSave prop instead of addToCollection */}
                          <button 
@@ -573,7 +573,7 @@ const ImaginablePage = ({ state, setState, onSave, onError }: any) => {
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
         {previewImage && (
           <div className="bg-white dark:bg-zinc-900 p-2 rounded-2xl shadow-2xl animate-in zoom-in duration-200">
-            <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-xl" />
+            <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-xl" referrerPolicy="no-referrer" />
             <div className="p-4 flex justify-between items-center">
                <p className="text-sm text-gray-500 dark:text-gray-400 italic line-clamp-1 max-w-[70%]">"{previewImage.prompt}"</p>
                <div className="flex gap-3">
@@ -624,7 +624,7 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
             <div className="w-full h-[400px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl bg-silver-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden group transition-all duration-300">
               {baseImage ? (
                 <>
-                  <img src={URL.createObjectURL(baseImage as Blob)} alt="Original" className="w-full h-full object-contain" />
+                  <img src={URL.createObjectURL(baseImage as Blob)} alt="Original" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   <button onClick={() => updateState({ baseImage: null })} className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"><X size={16} /></button>
                 </>
               ) : (
@@ -674,7 +674,7 @@ const EditablePage = ({ state, setState, onSave, onError }: any) => {
            <div className="flex-1 flex items-center justify-center bg-silver-50 dark:bg-zinc-950 rounded-xl border border-silver-100 dark:border-zinc-800 transition-colors relative overflow-hidden">
              {resultImage ? (
                <>
-                 <img src={resultImage.url} alt="Result" className="w-full h-full object-contain animate-in fade-in duration-500" />
+                 <img src={resultImage.url} alt="Result" className="w-full h-full object-contain animate-in fade-in duration-500" referrerPolicy="no-referrer" />
                  <div className="absolute bottom-4 right-4 flex gap-2">
                     <button onClick={() => onSave(resultImage)} className="p-3 bg-gold-500 text-white rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all"><Save size={20} /></button>
                     <a href={resultImage.url} download className="p-3 bg-white text-black rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all"><Download size={20} /></a>
@@ -729,7 +729,7 @@ const PromptablePage = ({ state, setState, onError }: any) => {
           <div className="h-[400px] border-2 border-dashed border-silver-300 dark:border-zinc-700 rounded-xl flex items-center justify-center relative overflow-hidden bg-silver-100 dark:bg-zinc-800">
             {image ? (
                <>
-                 <img src={URL.createObjectURL(image as Blob)} className="h-full object-contain" />
+                 <img src={URL.createObjectURL(image as Blob)} className="h-full object-contain" referrerPolicy="no-referrer" />
                  <button onClick={() => updateState({ image: null })} className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-colors"><X size={16} /></button>
                </>
             ) : (
@@ -804,7 +804,7 @@ const Any2TextPage = ({ state, setState, onError }: any) => {
 
   const renderFilePreview = (item: any) => {
     const { type } = item.file;
-    if (type.startsWith('image/')) return <img src={item.previewUrl} className="max-h-full object-contain" />;
+    if (type.startsWith('image/')) return <img src={item.previewUrl} className="max-h-full object-contain" referrerPolicy="no-referrer" />;
     if (type.startsWith('video/')) return <video src={item.previewUrl} className="max-h-full" controls />;
     if (type.startsWith('audio/')) return <div className="flex flex-col items-center gap-4"><Music size={48} className="text-gold-500" /><audio src={item.previewUrl} controls className="w-64" /></div>;
     if (type === 'application/pdf' || item.file.name.endsWith('.pdf')) return <div className="flex flex-col items-center gap-4 text-red-500"><FileText size={64} /><span>PDF Document</span></div>;
@@ -907,7 +907,7 @@ const CollectionPage = ({ collection, onDelete, onError }: any) => {
         <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
           {collection.map((img: any) => (
             <div key={img.id} className="break-inside-avoid group relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-lg border border-silver-100 dark:border-zinc-800 animate-in fade-in duration-500 hover:shadow-2xl transition-all">
-              <img src={img.url} className="w-full h-auto object-cover" />
+              <img src={img.url} className="w-full h-auto object-cover" referrerPolicy="no-referrer" />
               <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 p-6 flex flex-col justify-between backdrop-blur-[2px]">
                  <div className="space-y-2">
                     <p className="text-white text-[10px] font-black tracking-widest uppercase opacity-50">Prompt</p>
@@ -930,7 +930,7 @@ const CollectionPage = ({ collection, onDelete, onError }: any) => {
       <Modal isOpen={!!previewImage} onClose={() => setPreviewImage(null)}>
         {previewImage && (
           <div className="bg-white dark:bg-zinc-900 p-2 rounded-2xl shadow-2xl relative animate-in zoom-in duration-200">
-            <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-xl shadow-inner" />
+            <img src={previewImage.url} className="max-w-full max-h-[85vh] rounded-xl shadow-inner" referrerPolicy="no-referrer" />
             <div className="p-6 space-y-4">
                <div className="flex justify-between items-start">
                   <div className="space-y-1">

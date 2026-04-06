@@ -18,7 +18,7 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 export const enhancePrompt = async (originalPrompt: string): Promise<string> => {
   if (!originalPrompt) return "";
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -40,7 +40,7 @@ export const generateImage = async (
   referenceImages: File[] = [],
   count: number = 1
 ): Promise<string[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const images: string[] = [];
 
   // IMAGEN MODELS
@@ -137,7 +137,7 @@ export const editImage = async (
   baseImage: File,
   instruction: string
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const base64 = await fileToBase64(baseImage);
     const response = await ai.models.generateContent({
@@ -173,7 +173,7 @@ export const upscaleImage = async (
   base64Url: string,
   aspectRatio: string = '1:1'
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const mimeMatch = base64Url.match(/data:([^;]+);/);
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
@@ -223,7 +223,7 @@ export const analyzeImageForPrompt = async (
   image: File,
   type: 'image' | 'video'
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const base64 = await fileToBase64(image);
     const systemPrompt = type === 'image' 
@@ -253,7 +253,7 @@ export const analyzeImageForPrompt = async (
 };
 
 export const extractTextFromFile = async (file: File): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const base64 = await fileToBase64(file);
     let prompt = "Extract all visible text from this content. Return ONLY the extracted text content.";
